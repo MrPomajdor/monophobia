@@ -52,7 +52,8 @@ public class Movement : MonoBehaviour
     private float baseFOV;
     private float fov;
     bool shift = false;
-
+    [HideInInspector]
+    public bool isMoving;
     public Player playersc;
     private void Start()
     {
@@ -83,7 +84,10 @@ public class Movement : MonoBehaviour
 
         moveDirection = mouse.transform.forward * vertMovement + mouse.transform.right * horMovement;
         moveDirection = new Vector3(moveDirection.x, 0, moveDirection.z);
-
+        if (moveDirection.magnitude > 0)
+            isMoving = true;
+        else
+            isMoving = false;
         rb.drag = drag;
 
         if (isGrounded)

@@ -21,6 +21,7 @@ public class MapInfo
     public string mapName = "grid0";
     public int time = 300;
     public PlayerInfo[] players;
+       
 
 }
 

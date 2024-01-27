@@ -290,9 +290,11 @@ MonoBehaviour:
     cosmetics: []
     skin: 
     isHost: 0
+    isLocal: 0
   cam: {fileID: 7127683235722503675}
   mouseRotation: {fileID: 7127683235722503676}
   movement: {fileID: 7127683235744842814}
+  rb: {fileID: 7127683235744842813}
 --- !u!114 &7127683235744842814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -332,11 +334,14 @@ MonoBehaviour:
   jumpForce: 4.5
   useGravity: 1
   CustomGravity: 110
+  rb: {fileID: 0}
   col: {fileID: 7127683235911055369}
   mouse: {fileID: 7127683235722503676}
   moweLawn: 0
   stats: {fileID: 7127683235744842817}
   isSprinting: 0
+  isMoving: 0
+  playersc: {fileID: 0}
 --- !u!54 &7127683235744842813
 Rigidbody:
   m_ObjectHideFlags: 0

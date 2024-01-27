@@ -15,6 +15,7 @@ public static class Headers
     public static byte[] hello = new byte[] { 0x02, 0x00 };
     public static byte[] data = new byte[] { 0x03, 0x00 };
     public static byte[] disconnecting = new byte[] { 0x04, 0x00 };
+    public static byte[] rejected = new byte[] { 0xFF, 0xFF };
 
 }
 public static class Flags
@@ -40,6 +41,8 @@ public static class Flags
         public static byte[] playerList = new byte[] { 0x05 };
         public static byte[] lobbyList = new byte[] { 0x06 };
         public static byte[] lobbyInfo = new byte[] { 0x09 };
+        public static byte[] error = new byte[] { 0xFF };
+        public static byte[] closing_con = new byte[] { 0xF0 };
 
     }
 }

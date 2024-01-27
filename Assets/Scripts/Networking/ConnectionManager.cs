@@ -27,6 +27,12 @@ public class ConnectionManager : MonoBehaviour
     private PlayerInfo[] players;
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;
+
+
+    private void OnDisable()
+    {
+        Disconnect();
+    }
     public void PrintByteArray(byte[] bytes)
     {
         var sb = new StringBuilder("new byte[] { ");
@@ -128,9 +134,11 @@ public class ConnectionManager : MonoBehaviour
     {
         Disconnect();
     }
+
+
     public void ConnectToServer()
     {
-        Connect(IPAddress.Parse("127.0.0.1"));
+        Connect(IPAddress.Parse("88.135.184.123"));
     }
     private void Start()
     {
@@ -144,6 +152,7 @@ public class ConnectionManager : MonoBehaviour
         parser.RegisterHeaderProcessor(Headers.echo, ParseECHO);
         parser.RegisterHeaderProcessor(Headers.hello, HelloFromServer);
         parser.RegisterHeaderProcessor(Headers.data, ParseData);
+        parser.RegisterHeaderProcessor(Headers.rejected, ParseData);
         parser.RegisterHeaderProcessor(Headers.disconnecting, ParseDisconnect);
     }
     
@@ -152,6 +161,22 @@ public class ConnectionManager : MonoBehaviour
         parser.DigestMessage(_data);
     }
 
+    private void ParseRejection(Packet packet)
+    //friendzone :c
+    {
+        if (packet.flag[0] == Flags.Response.closing_con[0])
+        {
+            FindObjectOfType<MapLoader>().ReturnToMenu();
+            Disconnect();
+            return;
+        }
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+            string error = reader.ReadString(); //TODO: Display the error in the game
+            Debug.LogError($"REMOTE ERROR: {error}");
+        }
+    }
     private void ParseData(Packet packet)
     {
         switch (packet.flag[0])
@@ -178,11 +203,9 @@ public class ConnectionManager : MonoBehaviour
         Packet join_packet = new Packet();
         join_packet.header = Headers.data;
         join_packet.flag = Flags.Post.joinLobby;
-        PrintByteArray(join_packet.payload);
         join_packet.AddToPayload(id);
-        PrintByteArray(join_packet.payload);
         join_packet.AddToPayload(password);
-        PrintByteArray(join_packet.payload);
+        join_packet.AddToPayload(FindObjectOfType<UDPHandler>().local_port);
         join_packet.Send(stream);
     }
     #endregion
@@ -225,16 +248,20 @@ public class ConnectionManager : MonoBehaviour
             string json = Encoding.UTF8.GetString(stringData);
             ThreadManager.ExecuteOnMainThread(() =>
             {
-                MapInfo mapInfo = JsonUtility.FromJson<MapInfo>(json);
-                if (inLobby)
+                try
                 {
+                    MapInfo mapInfo = JsonUtility.FromJson<MapInfo>(json);
+                    if(!inLobby)
+                        FindObjectOfType<MapLoader>().LoadMap(mapInfo);
+                    else
+                        FindObjectOfType<MapLoader>().UpdateMap(mapInfo);
 
+                    players = mapInfo.players;
                 }
-                else
+                catch
                 {
-                    FindObjectOfType<MapLoader>().LoadMap(mapInfo);
+                    Debug.LogError("invalid lobby info JSON");
                 }
-                players = mapInfo.players;
             });
 
         }

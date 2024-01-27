@@ -21,17 +21,18 @@ public class Voice : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"),1338);
+        //sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        //endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"),1338);
 
-        mic = Microphone.Start(null, true, 1, 22050);
-        src.clip = recieved;
-        src.Play();
+        //mic = Microphone.Start(null, true, 1, 22050);
+        //src.clip = recieved;
+        //src.Play();
     }
 
     // Update is called once per frame
     void Update()
     {
+        /*
         if ((pos = Microphone.GetPosition(null)) > 0)
         {
             if (lastPos > pos) lastPos = 0;
@@ -70,7 +71,7 @@ public class Voice : MonoBehaviour
                 }
                 lastPos = pos;
             }
-        }
+        }*/
     }
 
     private static void SendAndReceive()
