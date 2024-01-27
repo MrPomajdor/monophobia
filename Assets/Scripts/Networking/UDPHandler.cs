@@ -78,10 +78,10 @@ public class UDPHandler : MonoBehaviour
                         {
                             ThreadManager.ExecuteOnMainThread(() =>
                             {
-                                client.connectedPlayer.velocity = new Vector3(matchingPlayer.transforms.velocity.x, matchingPlayer.transforms.velocity.y, matchingPlayer.transforms.velocity.z);
-                                client.connectedPlayer.postion = new Vector3(matchingPlayer.transforms.position.x, matchingPlayer.transforms.position.y, matchingPlayer.transforms.position.z);
-                                Vector3 rot = new Vector3(matchingPlayer.transforms.rotation.x, matchingPlayer.transforms.rotation.y, matchingPlayer.transforms.rotation.z);
-                                client.connectedPlayer.rotation = rot;
+                                client.connectedPlayer.real_velocity = matchingPlayer.transforms.real_velocity;
+                                client.connectedPlayer.target_velocity = matchingPlayer.transforms.target_velocity;
+                                client.connectedPlayer.position = matchingPlayer.transforms.position;
+                                client.connectedPlayer.rotation = matchingPlayer.transforms.rotation;
                                 client.connectedPlayer.lastTime = Time.realtimeSinceStartup;
                             });
                         }

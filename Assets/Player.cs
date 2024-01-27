@@ -11,7 +11,7 @@ public class Player : MonoBehaviour
     public Movement movement;
     ConnectionManager conMan;
     public Rigidbody rb;
-    public Vector3 velocity, postion, rotation;
+    public Vector3 real_velocity, position, rotation, target_velocity;
     public float lastTime;
     void Start()
     {
@@ -38,19 +38,15 @@ public class Player : MonoBehaviour
         lt2 += Time.deltaTime;
         if (!playerInfo.isLocal)
         {  //-----------------------------------------REMOTE CODE------------------------------------------------
-            Vector3 predictedPos = transform.position + (velocity * (lastTime-Time.realtimeSinceStartup));
-           
+            Vector3 predictedPos = transform.position + (target_velocity * (lastTime-Time.realtimeSinceStartup));
 
-            rb.velocity = velocity;
-            if (Vector3.Distance(transform.position, predictedPos) > 0.2f)
-            {
-               rb.velocity += predictedPos - transform.position;
-            }
-
-            if (Vector3.Distance(transform.position, postion) > 1)
-            {
-                transform.position = postion;
-            }
+            transform.rotation = Quaternion.Euler(0, rotation.y, 0);
+            rb.velocity = real_velocity;
+            rb.velocity +=  position - transform.position;
+            rb.velocity += target_velocity;
+            if (Vector3.Distance(transform.position, position) > 2)
+                transform.position = position;
+            
 
 
 
@@ -70,7 +66,7 @@ public class Player : MonoBehaviour
             else
                 s = false;
             */
-            if (Vector3.Distance(movement.rb.velocity, prev) > 1f || Vector3.Distance(mouseRotation.transform.eulerAngles, prevrot) > 20 || (movement.rb.velocity.magnitude < 0.1f && Vector3.Distance(movement.rb.velocity, prev) > 0.1f))
+            /*if (Vector3.Distance(movement.rb.velocity, prev) > 1f || Vector3.Distance(mouseRotation.transform.eulerAngles, prevrot) > 20 || (movement.rb.velocity.magnitude < 0.1f && Vector3.Distance(movement.rb.velocity, prev) > 0.1f))
             {
                 if (lt < 0.15f)
                     return;
@@ -84,6 +80,12 @@ public class Player : MonoBehaviour
             {
                 lt2 = 0;
                 conMan.SendLocationInfo(this);
+            }*/
+
+            if (lt2 > 0.15f)
+            {
+                conMan.SendLocationInfo(this);
+                lt2 = 0;
             }
         }
     }

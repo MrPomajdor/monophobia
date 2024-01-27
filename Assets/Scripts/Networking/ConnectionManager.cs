@@ -219,7 +219,8 @@ public class ConnectionManager : MonoBehaviour
     {
         Transforms transforms_ = new Transforms();
         transforms_.position = player.transform.position;
-        transforms_.velocity = player.rb.velocity;
+        transforms_.target_velocity = player.movement.MoveDirection;
+        transforms_.real_velocity = player.rb.velocity;
         transforms_.rotation = player.movement.GetAngles();
 
         PlayerData playerData = new PlayerData();
@@ -369,17 +370,16 @@ public class ConnectionManager : MonoBehaviour
                 {
                     ThreadManager.ExecuteOnMainThread(() => //apply all the positions
                     {
-                        Debug.Log($"gameobject {matchingPlayer.connectedPlayer.gameObject.name} and {matchingPlayer.connectedPlayer.GetInstanceID()}");
-                        matchingPlayer.connectedPlayer.velocity = new Vector3(player.transforms.velocity.x, player.transforms.velocity.y, player.transforms.velocity.z);
-                        matchingPlayer.connectedPlayer.postion = new Vector3(player.transforms.position.x, player.transforms.position.y, player.transforms.position.z);
-                        Vector3 rot = new Vector3(player.transforms.rotation.x, player.transforms.rotation.y, player.transforms.rotation.z);
-                        matchingPlayer.connectedPlayer.rotation = rot;
+                        matchingPlayer.connectedPlayer.real_velocity = player.transforms.real_velocity;
+                        matchingPlayer.connectedPlayer.target_velocity = player.transforms.target_velocity;
+                        matchingPlayer.connectedPlayer.position = player.transforms.position;
+                        matchingPlayer.connectedPlayer.rotation = player.transforms.rotation;
                         matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
                     });
                 }
                 else
                 {
-                    Debug.LogWarning("no matching player found.");
+                    Debug.LogError($"no matching player found. {player.id}");
                 }
 
             }

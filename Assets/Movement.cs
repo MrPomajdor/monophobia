@@ -28,6 +28,11 @@ public class Movement : MonoBehaviour
     public float normalDrag;
     public float airDrag = 3;
     float add;
+
+    public Vector3 MoveDirection {
+        get { return moveDirection; }
+    }
+
     Vector3 moveDirection;
 
 
