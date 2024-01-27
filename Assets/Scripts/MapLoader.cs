@@ -8,6 +8,7 @@ public class MapLoader : MonoBehaviour
 {
     public GameObject PlayerPrefab;
     ConnectionManager conMan;
+    public bool lobbyLoading; //oh god no
     public MapManager CurrentMapManager 
     { 
         get { return mapManager; }
@@ -31,47 +32,41 @@ public class MapLoader : MonoBehaviour
         
     public void LoadMap(MapInfo mapInfo){
         StartCoroutine(LoadMapAsync(mapInfo));
+        Debug.Log("Loading map");
     }
 
-    public void UpdateMap(MapInfo mapInfo) // TODO: Update settings too, or sync every info at once.
+    public void UpdateMap(MapInfo mapInfo) //WHAT
     {
-        CurrentMapManager.mapInfo = mapInfo;
-
-        if (conMan.clients.Count != mapInfo.players.Length) {
-            UpdatePlayers(mapInfo);
-            return;
-        }
-        foreach(PlayerInfo player in mapInfo.players)
+        Debug.Log("Updating map------------------------");
+        Debug.Log(conMan.clients.Count);
+        foreach (PlayerInfo client in CurrentMapManager.mapInfo.players)
         {
-            if (conMan.clients.FirstOrDefault(x => x.name == player.name) == null)
+            if (mapInfo.players.FirstOrDefault(x => (x.name == client.name && x.id == client.id)) == null)
             {
-                UpdatePlayers(mapInfo);
+                GameObject xd = conMan.clients.FirstOrDefault(x => x.id == client.id).connectedPlayer.transform.root.gameObject;
+                conMan.clients.Remove(conMan.clients.FirstOrDefault(x =>  x.id == client.id));
+                Destroy(xd);
             }
         }
 
-        
-    }
-    private void UpdatePlayers(MapInfo mapInfo)
-    {
         foreach (PlayerInfo client in mapInfo.players)
         {
-            if(conMan.clients.FirstOrDefault(x => x.name == client.name) == null)
+            if (CurrentMapManager.mapInfo.players.FirstOrDefault(x => (x.name == client.name && x.id == client.id)) == null)
             {
+
                 CreatePlayer(client);
+
             }
         }
 
-        foreach (ClientHandle client in conMan.clients)
-        {
-            if (mapInfo.players.FirstOrDefault(x => x.name == client.name) == null)
-            {
-                conMan.clients.Remove(client);
-            }
-        }
+        CurrentMapManager.mapInfo = mapInfo;
+
         
     }
+
     private IEnumerator LoadMapAsync(MapInfo mapInfo) // TODO: Configure the MapManager, and make the LoadMapAsync apply values from MapInfo object
     {
+        lobbyLoading = true; //god please please no why 
         ConnectionManager conMan = FindObjectOfType<ConnectionManager>();
         string name = mapInfo.mapName;
         if (Application.CanStreamedLevelBeLoaded(name))
@@ -83,16 +78,12 @@ public class MapLoader : MonoBehaviour
             }
 
             mapManager = FindObjectOfType<MapManager>();
-            mapManager.mapInfo = mapInfo;/*
-            foreach(ClientHandle client in conMan.clients)
-            {
-                Destroy(client.connectedPlayer.gameObject);
-            }
-            conMan.clients.Clear();
-            Destroy(conMan.client_self.connectedPlayer.gameObject);*/
+            mapManager.mapInfo = mapInfo;
             foreach (PlayerInfo pl in mapInfo.players)
             {
-                CreatePlayer(pl);
+                Debug.Log($"SPIEDFALAJ {pl.id} {pl.name}");
+                if(pl.id!=conMan.client_self.id)
+                    CreatePlayer(pl);
             }
             //TODO: make that the local player loads everything (started)
             //TODO: make soimething to save settings and ever choose them.
@@ -109,20 +100,34 @@ public class MapLoader : MonoBehaviour
             Debug.LogError($"Scene {name} does not exist");
 
         }
+        lobbyLoading = false; //GOD DAMMIT
     }
-    void CreatePlayer(PlayerInfo pl)
+    void CreatePlayer(PlayerInfo pl, bool self=false) //27.01.2024
+                                                      //TODO: add every other variable that is to player.
+                                                      //the fuck this function gets called out of nowhere? Booooo...
+                                                      //no fr this time why the fuck this shit is getting called TWO FUCKING TIMES IN A ROW WHEN I CAN CLEARLY SEE LIKE IN THE DEBUGGER THAT IT SHOULD BE CALLED ONCE?
     {
+       if(conMan.clients.FirstOrDefault(x =>  x.id == pl.id) != null)
+        {
+            Debug.LogWarning("Tried to create multiple player models with the same id");
+            return;
+        }
+        Debug.Log($"Creating player {pl.name} with id {pl.id} ({self})");
         GameObject new_player = Instantiate(PlayerPrefab);
         Player npl = new_player.GetComponent<Player>();
         npl.playerInfo = pl;
-        npl.movement.enabled = false;
-        npl.cam.enabled = false;
-        npl.movement.enabled = false;
+        npl.movement.enabled = self;
+        npl.cam.enabled = self;
+        npl.movement.enabled = self;
+        npl.playerInfo.isLocal = self;
+        npl.playerInfo.id = self ? conMan.client_self.id : npl.playerInfo.id;
+        npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
         npl.cam.GetComponent<AudioListener>().enabled = false;
         ClientHandle binpl = new ClientHandle();
-        binpl.id = npl.playerInfo.id;
-        binpl.name = npl.playerInfo.name;
+        binpl.id = self ? conMan.client_self.id : npl.playerInfo.id;
+        binpl.name = self ? conMan.client_self.name : npl.playerInfo.name;
         binpl.connectedPlayer = npl;
         conMan.clients.Add(binpl);
+        Debug.Log(conMan.clients.Count);
     }
 }

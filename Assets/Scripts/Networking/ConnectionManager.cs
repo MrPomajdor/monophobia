@@ -21,6 +21,7 @@ public class ConnectionManager : MonoBehaviour
     public bool connected;
     ByteArrayComparer comparer = new ByteArrayComparer();
     public ClientHandle client_self = new ClientHandle();
+    [SerializeField]
     public List<ClientHandle> clients = new List<ClientHandle>();
     private LobbyManager lobbyManager;
     bool inLobby = false;
@@ -285,7 +286,7 @@ public class ConnectionManager : MonoBehaviour
                 ClientHandle client = new ClientHandle();
                 client.id = reader.ReadInt32();
                 client.name = reader.ReadString();
-                clients.Add(client);
+                //clients.Add(client);
             }
         }
     }
@@ -296,11 +297,9 @@ public class ConnectionManager : MonoBehaviour
     }
     private void ParseACK(Packet packet)
     {
-        Debug.Log("Ookay nice.");
     }
     private void ParseECHO(Packet packet)
     {
-        Debug.Log("ooh an echo!  responding.");
         Packet ackp = new Packet();
         ackp.header = Headers.echo;
         ackp.flag = Flags.none;
@@ -327,14 +326,19 @@ public class ConnectionManager : MonoBehaviour
     #region Json data
     private void ParseLobbyInfo(Packet packet) //TODO: Add map handling and lobby handling
     {
-
+        Debug.Log("Got lobby info");
         ThreadManager.ExecuteOnMainThread(() =>
         {
             MapInfo mapInfo = packet.GetJson<MapInfo>();
             if (mapInfo == null)
                 return;
-            if (!inLobby)
+            if (FindObjectOfType<MapLoader>().lobbyLoading) //I HATE MYSELF
+                return;                                     //TODO: do something with this shitty ass hack
+
+            if (FindObjectOfType<MapLoader>().CurrentMapManager == null)
+            {
                 FindObjectOfType<MapLoader>().LoadMap(mapInfo);
+            }
             else
                 FindObjectOfType<MapLoader>().UpdateMap(mapInfo);
 
@@ -346,26 +350,31 @@ public class ConnectionManager : MonoBehaviour
 
     private void ParseTransformData(Packet packet)
     {
+        
         ThreadManager.ExecuteOnMainThread(() =>
         {
-            PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
-            foreach (ClientHandle client in clients)
+            foreach(ClientHandle test in clients)
             {
-                if (client.id == client_self.id)
+                Debug.Log($"Client in clients(ClientHandle) {test.id} : {test.name} {test.connectedPlayer}");
+            }
+            PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
+            foreach (PlayerData player in json_.players) // for each player in recieved json
+            {
+                if (player.id == client_self.id)
                     continue;
-                //Debug.Log($"OG Text: {text}, type {t.type} and final json {json_.players.Length}");
-                Debug.Log($"Got player with id {client.id}");
-                PlayerData matchingPlayer = json_.players.FirstOrDefault(x => x.id == client.id);
+                
+                ClientHandle matchingPlayer = clients.FirstOrDefault(x => x.id == player.id); //find the connected local player by id
 
                 if (matchingPlayer != null)
                 {
-                    ThreadManager.ExecuteOnMainThread(() =>
+                    ThreadManager.ExecuteOnMainThread(() => //apply all the positions
                     {
-                        client.connectedPlayer.velocity = new Vector3(matchingPlayer.transforms.velocity.x, matchingPlayer.transforms.velocity.y, matchingPlayer.transforms.velocity.z);
-                        client.connectedPlayer.postion = new Vector3(matchingPlayer.transforms.position.x, matchingPlayer.transforms.position.y, matchingPlayer.transforms.position.z);
-                        Vector3 rot = new Vector3(matchingPlayer.transforms.rotation.x, matchingPlayer.transforms.rotation.y, matchingPlayer.transforms.rotation.z);
-                        client.connectedPlayer.rotation = rot;
-                        client.connectedPlayer.lastTime = Time.realtimeSinceStartup;
+                        Debug.Log($"gameobject {matchingPlayer.connectedPlayer.gameObject.name} and {matchingPlayer.connectedPlayer.GetInstanceID()}");
+                        matchingPlayer.connectedPlayer.velocity = new Vector3(player.transforms.velocity.x, player.transforms.velocity.y, player.transforms.velocity.z);
+                        matchingPlayer.connectedPlayer.postion = new Vector3(player.transforms.position.x, player.transforms.position.y, player.transforms.position.z);
+                        Vector3 rot = new Vector3(player.transforms.rotation.x, player.transforms.rotation.y, player.transforms.rotation.z);
+                        matchingPlayer.connectedPlayer.rotation = rot;
+                        matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
                     });
                 }
                 else

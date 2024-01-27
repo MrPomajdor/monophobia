@@ -30,7 +30,7 @@ public class Player : MonoBehaviour
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        //GUI.Label(new Rect(10, 10, 500, 1000),$"Local tcp port : {conMan.local_port}\nLocal Player ID: {playerInfo.id}\nLast Packet time: {lastTime}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nLast Packet time: {lastTime}", style);
     }
     void Update()
     {
