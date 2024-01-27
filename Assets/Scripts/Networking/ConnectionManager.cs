@@ -190,8 +190,13 @@ public class ConnectionManager : MonoBehaviour
             case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
                 ParseLobbyList(packet);
                 break;
+
+            //-----------------------------JSON DATA-----------------------------
             case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
                 ParseLobbyInfo(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.transformData[0]:
+                ParseTransformData(packet);
                 break;
         }
 
@@ -208,9 +213,30 @@ public class ConnectionManager : MonoBehaviour
         join_packet.AddToPayload(FindObjectOfType<UDPHandler>().local_port);
         join_packet.Send(stream);
     }
+
+    public void SendLocationInfo(Player player)
+    {
+        Transforms transforms_ = new Transforms();
+        transforms_.position = player.transform.position;
+        transforms_.velocity = player.rb.velocity;
+        transforms_.rotation = player.movement.GetAngles();
+
+        PlayerData playerData = new PlayerData();
+        playerData.id = player.playerInfo.id;
+        playerData.transforms = transforms_;
+
+        string mes = JsonUtility.ToJson(playerData);
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Post.transformData;
+        packet.AddToPayload(mes);
+        packet.Send(stream);
+    }
     #endregion
 
     #region Parsing Incoming Packets
+
+    #region Non-json Data
     private void ParseLobbyList(Packet packet)
     {
         using (MemoryStream _stream = new MemoryStream(packet.payload))
@@ -234,36 +260,6 @@ public class ConnectionManager : MonoBehaviour
                 lobbyManager.Clear();
                 lobbyManager.AddLobbyToUI(lobby_id, lobbyName, max_players, current_players, protected_, this);
             }
-        }
-    }
-
-
-    private void ParseLobbyInfo(Packet packet) //TODO: Add map handling and lobby handling
-    {
-        using (MemoryStream _stream = new MemoryStream(packet.payload))
-        using (BinaryReader reader = new BinaryReader(_stream))
-        {
-            int stringLength = reader.ReadInt32();
-            byte[] stringData = reader.ReadBytes(stringLength);
-            string json = Encoding.UTF8.GetString(stringData);
-            ThreadManager.ExecuteOnMainThread(() =>
-            {
-                try
-                {
-                    MapInfo mapInfo = JsonUtility.FromJson<MapInfo>(json);
-                    if(!inLobby)
-                        FindObjectOfType<MapLoader>().LoadMap(mapInfo);
-                    else
-                        FindObjectOfType<MapLoader>().UpdateMap(mapInfo);
-
-                    players = mapInfo.players;
-                }
-                catch
-                {
-                    Debug.LogError("invalid lobby info JSON");
-                }
-            });
-
         }
     }
 
@@ -326,8 +322,64 @@ public class ConnectionManager : MonoBehaviour
         lobby_list_request.flag = Flags.Request.lobbyList;
         lobby_list_request.Send(stream);
     }
+    #endregion
+
+    #region Json data
+    private void ParseLobbyInfo(Packet packet) //TODO: Add map handling and lobby handling
+    {
+
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            MapInfo mapInfo = packet.GetJson<MapInfo>();
+            if (mapInfo == null)
+                return;
+            if (!inLobby)
+                FindObjectOfType<MapLoader>().LoadMap(mapInfo);
+            else
+                FindObjectOfType<MapLoader>().UpdateMap(mapInfo);
+
+            players = mapInfo.players;
+        });
+
+
+    }
+
+    private void ParseTransformData(Packet packet)
+    {
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
+            foreach (ClientHandle client in clients)
+            {
+                if (client.id == client_self.id)
+                    continue;
+                //Debug.Log($"OG Text: {text}, type {t.type} and final json {json_.players.Length}");
+                Debug.Log($"Got player with id {client.id}");
+                PlayerData matchingPlayer = json_.players.FirstOrDefault(x => x.id == client.id);
+
+                if (matchingPlayer != null)
+                {
+                    ThreadManager.ExecuteOnMainThread(() =>
+                    {
+                        client.connectedPlayer.velocity = new Vector3(matchingPlayer.transforms.velocity.x, matchingPlayer.transforms.velocity.y, matchingPlayer.transforms.velocity.z);
+                        client.connectedPlayer.postion = new Vector3(matchingPlayer.transforms.position.x, matchingPlayer.transforms.position.y, matchingPlayer.transforms.position.z);
+                        Vector3 rot = new Vector3(matchingPlayer.transforms.rotation.x, matchingPlayer.transforms.rotation.y, matchingPlayer.transforms.rotation.z);
+                        client.connectedPlayer.rotation = rot;
+                        client.connectedPlayer.lastTime = Time.realtimeSinceStartup;
+                    });
+                }
+                else
+                {
+                    Debug.LogWarning("no matching player found.");
+                }
+
+            }
+        });
+    }
+    #endregion
 
     #endregion
+
 
     IEnumerator watchdog()
     {

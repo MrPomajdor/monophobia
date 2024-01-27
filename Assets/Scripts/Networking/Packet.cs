@@ -33,16 +33,21 @@ public static class Flags
         public static byte[] createLobby = new byte[] { 0x11 };
         public static byte[] updateLobbyInfo = new byte[] { 0x10 };
 
+        public static byte[] transformData = new byte[] { 0xA0 };
+        public static byte[] lobbyInfo = new byte[] { 0xA1 };
+
+
     }
     public static class Response
     {
-        public static byte[] transformData = new byte[] { 0x02 };
         public static byte[] idAssign = new byte[] { 0x03 };
         public static byte[] playerList = new byte[] { 0x05 };
         public static byte[] lobbyList = new byte[] { 0x06 };
-        public static byte[] lobbyInfo = new byte[] { 0x09 };
         public static byte[] error = new byte[] { 0xFF };
         public static byte[] closing_con = new byte[] { 0xF0 };
+
+        public static byte[] transformData = new byte[] { 0xB0 };
+        public static byte[] lobbyInfo = new byte[] { 0x09 };
 
     }
 }
@@ -172,6 +177,25 @@ public class Packet
         Array.Copy(array1, result, array1.Length);
         Array.Copy(array2, 0, result, array1.Length, array2.Length);
         return result;
+    }
+
+    public T GetJson<T>()
+    {
+        using (MemoryStream memoryStream = new MemoryStream(payload))
+        using (BinaryReader reader = new BinaryReader(memoryStream))
+        {
+            try
+            {
+                int stringLength = reader.ReadInt32();
+                byte[] stringData = reader.ReadBytes(stringLength);
+                return JsonUtility.FromJson<T>(Encoding.UTF8.GetString(stringData));
+            }
+            catch
+            {
+                Debug.LogError("Bad json packet");
+                return default(T);
+            }
+        }
     }
 
 }

@@ -48,6 +48,7 @@ public class UDPHandler : MonoBehaviour
                                //27.01.2024 WHY THE FUCK THE CONNECTION IS CLOSING WHEN MORE THAN 1 PLAYERS JOIN FOR FUCKS SAKE
                                //oh wait that is on server's side
                                //why the fuck the server wants to send on port 0?
+                               //NOW WHY THE FUCK THIS SHIT DOWN BELOW IS NOT RECIEVING DATAAAAAAA
     {
 
         while (true)
@@ -59,6 +60,7 @@ public class UDPHandler : MonoBehaviour
             byte[] data = client.Receive(ref anyIP);
             string text = Encoding.UTF8.GetString(data);
             lastReceivedUDPPacket = text;
+            Debug.Log(text);
             var t = JsonUtility.FromJson<UDPPacket>(text);
             switch (t.type)
             {

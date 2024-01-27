@@ -9,14 +9,14 @@ public class Player : MonoBehaviour
     public Camera cam;
     public MouseRotation mouseRotation;
     public Movement movement;
-    UDPHandler udp;
+    ConnectionManager conMan;
     public Rigidbody rb;
     public Vector3 velocity, postion, rotation;
     public float lastTime;
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        udp = FindObjectOfType<UDPHandler>();
+        conMan = FindObjectOfType<ConnectionManager>();
         
     }
     Vector3 prev, prevrot;
@@ -30,7 +30,7 @@ public class Player : MonoBehaviour
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000),$"Local udp port : {udp.local_port}\nLocal Player ID: {playerInfo.id}\nLast Packet time: {lastTime}", style);
+        //GUI.Label(new Rect(10, 10, 500, 1000),$"Local tcp port : {conMan.local_port}\nLocal Player ID: {playerInfo.id}\nLast Packet time: {lastTime}", style);
     }
     void Update()
     {
@@ -58,7 +58,7 @@ public class Player : MonoBehaviour
         }
         else
         {  //-----------------------------------------LOCAL CODE-------------------------------------------------
-
+            /*
             if (!movement.isMoving)
             {
                 if (!s)
@@ -69,12 +69,13 @@ public class Player : MonoBehaviour
             }
             else
                 s = false;
+            */
             if (Vector3.Distance(movement.rb.velocity, prev) > 1f || Vector3.Distance(mouseRotation.transform.eulerAngles, prevrot) > 20 || (movement.rb.velocity.magnitude < 0.1f && Vector3.Distance(movement.rb.velocity, prev) > 0.1f))
             {
                 if (lt < 0.15f)
                     return;
                 lt = 0;
-                SendLocationInfo();
+                conMan.SendLocationInfo(this);
                 prev = movement.rb.velocity;
                 prevrot = mouseRotation.transform.eulerAngles;
             }
@@ -82,38 +83,12 @@ public class Player : MonoBehaviour
                 if (lt2 > 5)
             {
                 lt2 = 0;
-                SendLocationInfo();
+                conMan.SendLocationInfo(this);
             }
         }
     }
 
-    public void SendLocationInfo()
-    {
-        Transforms transforms_ = new Transforms();
-        transforms_.position = movement.transform.position;
-        transforms_.velocity = movement.rb.velocity;
-        transforms_.rotation = movement.GetAngles();
+    
 
-        PlayerData playerData = new PlayerData();
-        playerData.id = playerInfo.id;
-        playerData.transforms = transforms_;
 
-        string mes = JsonUtility.ToJson(playerData);
-        udp.SendString(mes);
-    }
-
-    public void SendLocationZeroVel()
-    {
-        Transforms transforms_ = new Transforms();
-        transforms_.position = movement.transform.position;
-        transforms_.velocity = Vector3.zero;
-        transforms_.rotation = movement.GetAngles();
-
-        PlayerData playerData = new PlayerData();
-        playerData.id = playerInfo.id;
-        playerData.transforms = transforms_;
-
-        string mes = JsonUtility.ToJson(playerData);
-        udp.SendString(mes);
-    }
 }
