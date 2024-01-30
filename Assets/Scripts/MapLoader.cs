@@ -64,7 +64,7 @@ public class MapLoader : MonoBehaviour
         
     }
 
-    private IEnumerator LoadMapAsync(MapInfo mapInfo) // TODO: Configure the MapManager, and make the LoadMapAsync apply values from MapInfo object
+    private IEnumerator LoadMapAsync(MapInfo mapInfo) //TODO: 23.01.2024 Configure the MapManager, and make the LoadMapAsync apply values from MapInfo object
     {
         lobbyLoading = true; //god please please no why 
         ConnectionManager conMan = FindObjectOfType<ConnectionManager>();

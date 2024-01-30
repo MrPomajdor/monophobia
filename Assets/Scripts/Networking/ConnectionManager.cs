@@ -224,6 +224,10 @@ public class ConnectionManager : MonoBehaviour
         transforms_.rotation = player.movement.GetAngles();
 
         PlayerData playerData = new PlayerData();
+        playerData.Inputs = new Inputs();
+        playerData.Inputs.isCrouching = player.movement.isCrouching;
+        playerData.Inputs.isSprinting = player.movement.isSprinting;
+        playerData.Inputs.isMoving = player.movement.isMoving;
         playerData.id = player.playerInfo.id;
         playerData.transforms = transforms_;
 
@@ -325,7 +329,7 @@ public class ConnectionManager : MonoBehaviour
     #endregion
 
     #region Json data
-    private void ParseLobbyInfo(Packet packet) //TODO: Add map handling and lobby handling
+    private void ParseLobbyInfo(Packet packet)
     {
         Debug.Log("Got lobby info");
         ThreadManager.ExecuteOnMainThread(() =>
@@ -375,6 +379,7 @@ public class ConnectionManager : MonoBehaviour
                         matchingPlayer.connectedPlayer.position = player.transforms.position;
                         matchingPlayer.connectedPlayer.rotation = player.transforms.rotation;
                         matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
+                        matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f; //TODO: make so the movement script handles movement. Split the movement script into local side and a remote side.
                     });
                 }
                 else

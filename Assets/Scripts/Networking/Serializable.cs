@@ -17,7 +17,7 @@ public class PlayerInfo
 [Serializable]
 public class MapInfo
 {
-    //TODO: Add more map class settings
+    //TODO: Add more map class settings if needed
     public string mapName = "grid0";
     public int time = 300;
     public PlayerInfo[] players;

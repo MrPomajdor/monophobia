@@ -15,12 +15,20 @@ public class UDPPacket
 {
     public string type;
 }
+[Serializable]
+public class Inputs
+{
+    public bool isSprinting;
+    public bool isMoving;
+    public bool isCrouching;
 
+}
 [Serializable]
 public class PlayerData 
 {
     public string type = "PlayerPositionData";
     public Transforms transforms;
+    public Inputs Inputs;
     public int id;
 
 }

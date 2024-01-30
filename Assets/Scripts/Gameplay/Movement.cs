@@ -56,7 +56,7 @@ public class Movement : MonoBehaviour
     public bool isSprinting;
     private float baseFOV;
     private float fov;
-    bool shift = false;
+    public bool isCrouching = false;
     [HideInInspector]
     public bool isMoving;
     public Player playersc;
@@ -124,12 +124,12 @@ public class Movement : MonoBehaviour
         if (Input.GetKey(KeyCode.LeftControl))
         {
             col.height = 0.8f;
-            shift = true;
+            isCrouching = true;
         }
         else
         {
             col.height = 2;
-            shift = false;
+            isCrouching = false;
 
         }
 
@@ -151,7 +151,7 @@ public class Movement : MonoBehaviour
 
             drag = normalDrag;
             _moveSpeed = moveSpeed * 1000 + add;
-            if (shift)
+            if (isCrouching)
                 _moveSpeed -= crouchSubtract * 1000;
 
         }
@@ -192,7 +192,7 @@ public class Movement : MonoBehaviour
         if (moveDirection.magnitude > 0 && isGrounded && rb.velocity.magnitude > 2) //View bobbing
         {
             float vbs = ViewBobbingSpeed;
-            if (shift)
+            if (isCrouching)
                 vbs /= 2;
             t += Time.deltaTime * vbs;
             t2 += Time.deltaTime * vbs / 2;
