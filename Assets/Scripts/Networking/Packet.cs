@@ -7,7 +7,11 @@ using System.Text;
 using UnityEngine;
 using System.IO;
 
-
+public enum Protocol
+{
+    TCP,
+    UDP
+}
 public static class Headers
 {
     public static byte[] ack = new byte[] { 0x00, 0x00 };
@@ -35,7 +39,7 @@ public static class Flags
 
         public static byte[] transformData = new byte[] { 0xA0 };
         public static byte[] lobbyInfo = new byte[] { 0xA1 };
-
+        public static byte[] voice = new byte[] { 0xAC };
 
     }
     public static class Response
@@ -48,6 +52,7 @@ public static class Flags
 
         public static byte[] transformData = new byte[] { 0xB0 };
         public static byte[] lobbyInfo = new byte[] { 0x09 };
+        public static byte[] voice = new byte[] { 0x0C };
 
     }
 }
@@ -72,6 +77,7 @@ public class Packet
         header = Headers.ack;
         flag = Flags.none;
         payload = new byte[] { };
+        Protocol protocol = Protocol.TCP;
     }
     public void DigestData(byte[] data)
     {
@@ -202,6 +208,7 @@ public class Packet
 public class PacketParser
 {
     private Dictionary<byte[], Action<Packet>> headerProcessors = new Dictionary<byte[], Action<Packet>>(new ByteArrayComparer());
+    private Dictionary<byte[], Action<Packet>> UDPheaderProcessors = new Dictionary<byte[], Action<Packet>>(new ByteArrayComparer());
 
     public static byte[] AssembleMessage(byte[] header, byte[] flag, byte[] payload)
     {
@@ -243,9 +250,16 @@ public class PacketParser
         }
     }
 
-    public void RegisterHeaderProcessor(byte[] header, Action<Packet> processor)
+    public void RegisterHeaderProcessor(byte[] header, Action<Packet> processor,Protocol protocol=Protocol.TCP)
     {
-        headerProcessors[header] = processor;
+        switch (protocol)
+        {
+            case Protocol.TCP:
+                headerProcessors[header] = processor;
+                break;
+            case Protocol.UDP:
+                break;
+        }
     }
 
 

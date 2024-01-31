@@ -14,25 +14,32 @@ public class UDPHandler : MonoBehaviour
 
     UdpClient client;
     IPEndPoint remoteEndPoint;
-    public int local_port;
     int remote_port = 1338;
     ConnectionManager conMan;
     public string lastReceivedUDPPacket = "";
     public string allReceivedUDPPackets = "";
 
 
+    void SendHolePunchingPacket()
+    {
+        byte[] data = System.Text.Encoding.UTF8.GetBytes("holepunch");
+        client.Send(data, data.Length, remoteEndPoint);
+    }
+
     // Use this for initialization
     void Start()
     {
         conMan = FindObjectOfType<ConnectionManager>();
-        local_port = UnityEngine.Random.Range(2000, 5000);
-        client = new UdpClient(local_port);
+        client = new UdpClient();
         remoteEndPoint = new IPEndPoint(IPAddress.Parse("88.135.184.123"), remote_port);
 
         receiveThread = new Thread(
             new ThreadStart(ReceiveData));
         receiveThread.IsBackground = true;
         receiveThread.Start();
+
+        InvokeRepeating("SendHolePunchingPacket", 0.5f, 0.5f);
+
     }
 
     // Update is called once per frame
@@ -49,6 +56,7 @@ public class UDPHandler : MonoBehaviour
                                //oh wait that is on server's side
                                //why the fuck the server wants to send on port 0?
                                //NOW WHY THE FUCK THIS SHIT DOWN BELOW IS NOT RECIEVING DATAAAAAAA
+                               //bro?
     {
 
         while (true)

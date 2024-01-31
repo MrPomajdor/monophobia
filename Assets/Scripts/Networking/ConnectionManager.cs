@@ -211,7 +211,6 @@ public class ConnectionManager : MonoBehaviour
         join_packet.flag = Flags.Post.joinLobby;
         join_packet.AddToPayload(id);
         join_packet.AddToPayload(password);
-        join_packet.AddToPayload(FindObjectOfType<UDPHandler>().local_port);
         join_packet.Send(stream);
     }
 
