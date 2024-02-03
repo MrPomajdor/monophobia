@@ -13,6 +13,7 @@ using System.Text;
 
 public class ConnectionManager : MonoBehaviour
 {
+    public string _IPAddress = "127.0.0.1";
     public PacketParser parser;
     private TcpClient socket;
     private NetworkStream stream;
@@ -28,6 +29,7 @@ public class ConnectionManager : MonoBehaviour
     private PlayerInfo[] players;
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;
+    private UDPHandler udp_handler;
 
 
     private void OnDisable()
@@ -44,6 +46,16 @@ public class ConnectionManager : MonoBehaviour
         sb.Append("}");
         Debug.Log(sb.ToString());
     }
+
+    public void SendVoiceData(byte[] vo_packet)
+    {
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Post.voice;
+        packet.AddToPayload(vo_packet);
+        packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
+    }
+
     private void Connect(IPAddress ip, int port = 1338)
     {
         
@@ -139,7 +151,7 @@ public class ConnectionManager : MonoBehaviour
 
     public void ConnectToServer()
     {
-        Connect(IPAddress.Parse("88.135.184.123"));
+        Connect(IPAddress.Parse(_IPAddress));
     }
     private void Start()
     {
@@ -149,6 +161,8 @@ public class ConnectionManager : MonoBehaviour
 
         parser = new PacketParser();
 
+        udp_handler = FindObjectOfType<UDPHandler>();
+        
         parser.RegisterHeaderProcessor(Headers.ack, ParseACK);
         parser.RegisterHeaderProcessor(Headers.echo, ParseECHO);
         parser.RegisterHeaderProcessor(Headers.hello, HelloFromServer);
@@ -157,7 +171,7 @@ public class ConnectionManager : MonoBehaviour
         parser.RegisterHeaderProcessor(Headers.disconnecting, ParseDisconnect);
     }
     
-    private void HandleData(byte[] _data)
+    public void HandleData(byte[] _data)
     {
         parser.DigestMessage(_data);
     }
@@ -190,6 +204,9 @@ public class ConnectionManager : MonoBehaviour
                 break;
             case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
                 ParseLobbyList(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.voice[0]:
+                ParseVoiceData(packet);
                 break;
 
             //-----------------------------JSON DATA-----------------------------
@@ -235,13 +252,26 @@ public class ConnectionManager : MonoBehaviour
         packet.header = Headers.data;
         packet.flag = Flags.Post.transformData;
         packet.AddToPayload(mes);
-        packet.Send(stream);
+        packet.Send(udp_handler.client,udp_handler.remoteEndPoint);
     }
     #endregion
 
     #region Parsing Incoming Packets
 
     #region Non-json Data
+    private void ParseVoiceData(Packet packet)
+    {
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+            int player_id = reader.ReadInt32();
+            ClientHandle cl = clients.FirstOrDefault(x => x.id == player_id);
+            byte[] _pay = packet.payload;
+
+            cl.connectedPlayer.voice.ReceiveAudioData(packet.payload.Skip(4).ToArray());
+
+        }
+    }
     private void ParseLobbyList(Packet packet)
     {
         using (MemoryStream _stream = new MemoryStream(packet.payload))
@@ -357,7 +387,7 @@ public class ConnectionManager : MonoBehaviour
         
         ThreadManager.ExecuteOnMainThread(() =>
         {
-            foreach(ClientHandle test in clients)
+            foreach (ClientHandle test in clients)
             {
                 Debug.Log($"Client in clients(ClientHandle) {test.id} : {test.name} {test.connectedPlayer}");
             }
@@ -380,10 +410,6 @@ public class ConnectionManager : MonoBehaviour
                         matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
                         matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f; //TODO: make so the movement script handles movement. Split the movement script into local side and a remote side.
                     });
-                }
-                else
-                {
-                    Debug.LogError($"no matching player found. {player.id}");
                 }
 
             }

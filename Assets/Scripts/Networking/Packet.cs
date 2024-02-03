@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using System.IO;
+using System.Net;
 
 public enum Protocol
 {
@@ -128,7 +129,25 @@ public class Packet
             Debug.LogError($"Failed to send a packet {e}");
         }
     }
+    public void Send(UdpClient socket,IPEndPoint endPoint )
+    {
+        try
+        {
 
+            byte[] buf = PacketParser.AssembleMessage(header, flag, payload);
+            if (buf == null)
+            {
+                Debug.LogError("Packet buffer is null! Cannot send.");
+                return;
+            }
+
+            socket.Send(buf, buf.Length, endPoint);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to send a packet {e}");
+        }
+    }
     public void AddToPayload(float value)
     {
         using (MemoryStream memoryStream = new MemoryStream())
@@ -162,6 +181,16 @@ public class Packet
     }
 
     public void AddToPayload(bool value)
+    {
+        using (MemoryStream memoryStream = new MemoryStream())
+        using (BinaryWriter writer = new BinaryWriter(memoryStream))
+        {
+            writer.Write(value);
+            payload = ConcatArrays(payload, memoryStream.ToArray());
+        }
+    }
+
+    public void AddToPayload(byte[] value)
     {
         using (MemoryStream memoryStream = new MemoryStream())
         using (BinaryWriter writer = new BinaryWriter(memoryStream))

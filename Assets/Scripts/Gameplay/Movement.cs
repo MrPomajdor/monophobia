@@ -183,7 +183,7 @@ public class Movement : MonoBehaviour
         if (useGravity)
         {
             rb.useGravity = false;
-            rb.AddForce(Vector3.down * CustomGravity * (rb.mass * rb.mass));
+            rb.AddForce(Vector3.down * CustomGravity);//(rb.mass * rb.mass));
         }
         else
         {

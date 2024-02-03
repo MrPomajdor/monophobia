@@ -81,18 +81,20 @@ public class MapLoader : MonoBehaviour
             mapManager.mapInfo = mapInfo;
             foreach (PlayerInfo pl in mapInfo.players)
             {
-                Debug.Log($"SPIEDFALAJ {pl.id} {pl.name}");
                 if(pl.id!=conMan.client_self.id)
                     CreatePlayer(pl);
             }
             //TODO: make that the local player loads everything (started)
             //TODO: make soimething to save settings and ever choose them.
+
+            //Here we should use the CreatePlayer function but i would have to do that and im lazy
             GameObject local_player = Instantiate(PlayerPrefab);
             Player lcp = local_player.GetComponent<Player>();
             lcp.playerInfo.isLocal = true;
             lcp.playerInfo.id = conMan.client_self.id;
             lcp.playerInfo.name = conMan.client_self.name;
             conMan.client_self.connectedPlayer = lcp;
+            lcp.voice.SendAudio = true;
 
         }
         else
@@ -106,6 +108,7 @@ public class MapLoader : MonoBehaviour
                                                       //TODO: add every other variable that is to player.
                                                       //the fuck this function gets called out of nowhere? Booooo...
                                                       //no fr this time why the fuck this shit is getting called TWO FUCKING TIMES IN A ROW WHEN I CAN CLEARLY SEE LIKE IN THE DEBUGGER THAT IT SHOULD BE CALLED ONCE?
+                                                      //forgot to update. its working
     {
        if(conMan.clients.FirstOrDefault(x =>  x.id == pl.id) != null)
         {
@@ -122,6 +125,7 @@ public class MapLoader : MonoBehaviour
         npl.playerInfo.isLocal = self;
         npl.playerInfo.id = self ? conMan.client_self.id : npl.playerInfo.id;
         npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
+        npl.voice.SendAudio = self;
         npl.cam.GetComponent<AudioListener>().enabled = false;
         ClientHandle binpl = new ClientHandle();
         binpl.id = self ? conMan.client_self.id : npl.playerInfo.id;
