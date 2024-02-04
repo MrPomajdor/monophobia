@@ -21,6 +21,7 @@ public static class Headers
     public static byte[] data = new byte[] { 0x03, 0x00 };
     public static byte[] disconnecting = new byte[] { 0x04, 0x00 };
     public static byte[] rejected = new byte[] { 0xFF, 0xFF };
+    public static byte[] imHere = new byte[] { 0xAA, 0xAA};
 
 }
 public static class Flags
@@ -223,7 +224,9 @@ public class Packet
             {
                 int stringLength = reader.ReadInt32();
                 byte[] stringData = reader.ReadBytes(stringLength);
-                return JsonUtility.FromJson<T>(Encoding.UTF8.GetString(stringData));
+                string ms = Encoding.UTF8.GetString(stringData);
+
+                return JsonUtility.FromJson<T>(ms);
             }
             catch
             {

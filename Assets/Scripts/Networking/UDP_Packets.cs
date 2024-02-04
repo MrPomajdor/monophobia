@@ -29,7 +29,7 @@ public class PlayerData
     public string type = "PlayerPositionData";
     public Transforms transforms;
     public Inputs Inputs;
-    public int id;
+    public int id=-1;
 
 }
 

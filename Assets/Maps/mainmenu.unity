@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 2160.126, g: 2264.5137, b: 3287.918, a: 1}
+  m_IndirectSpecularColor: {r: 2161.8057, g: 2265.7305, b: 3288.8906, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1643,6 +1643,7 @@ GameObject:
   - component: {fileID: 963629251}
   - component: {fileID: 963629250}
   - component: {fileID: 963629249}
+  - component: {fileID: 963629252}
   m_Layer: 0
   m_Name: xd
   m_TagString: Untagged
@@ -1758,7 +1759,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ae984a80dd10604a898e2558683ae62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  src: {fileID: 963629249}
+  SendAudio: 0
+  mute_self: 0
 --- !u!4 &963629251
 Transform:
   m_ObjectHideFlags: 0
@@ -1774,6 +1776,35 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 9
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &963629252
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963629248}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f9d9490115362b448eaeb80200b78d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerInfo:
+    name: 
+    id: 0
+    cosmetics: []
+    skin: 
+    isHost: 0
+    isLocal: 0
+  cam: {fileID: 0}
+  mouseRotation: {fileID: 0}
+  movement: {fileID: 0}
+  rb: {fileID: 0}
+  real_velocity: {x: 0, y: 0, z: 0}
+  position: {x: 0, y: 0, z: 0}
+  rotation: {x: 0, y: 0, z: 0}
+  target_velocity: {x: 0, y: 0, z: 0}
+  lastTime: 0
+  voice: {fileID: 0}
 --- !u!1001 &971565454
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2031,7 +2062,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1211ca034e5705d4db9ed578a9844622, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _IPAddress: 10.0.0.210
   connected: 0
+  client_self:
+    id: -1
+    health: 100
+    name: 
+    connectedPlayer: {fileID: 0}
+  clients: []
 --- !u!4 &1090690892
 Transform:
   m_ObjectHideFlags: 0
@@ -2330,6 +2368,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   PlayerPrefab: {fileID: 7127683235744842812, guid: 195136b030b9dff41a78aaea0568cec5,
     type: 3}
+  lobbyLoading: 0
 --- !u!4 &1341109279
 Transform:
   m_ObjectHideFlags: 0

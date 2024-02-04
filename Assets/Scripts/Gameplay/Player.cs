@@ -30,7 +30,7 @@ public class Player : MonoBehaviour
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nLast Packet time: {lastTime}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nLast Packet time: {lastTime}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}", style);
     }
     void Update()
     {
@@ -56,12 +56,19 @@ public class Player : MonoBehaviour
         }
         else
         {  //-----------------------------------------LOCAL CODE-------------------------------------------------
-           
+
             //voice
-            byte[] vo_packet;
-            if (voice.Voice.TryDequeue(out vo_packet))
+            if (playerInfo.isLocal)
             {
-                conMan.SendVoiceData(vo_packet);
+                if (voice.DataAvailable())
+                {
+                    //Debug.Log("Voice data avaliable!");
+                    conMan.SendVoiceData(voice.GetVoiceData());
+                }
+                else
+                {
+                   // Debug.Log("no voice data");
+                }
             }
 
             //periodic position sending

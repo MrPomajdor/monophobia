@@ -49,6 +49,7 @@ public class ConnectionManager : MonoBehaviour
 
     public void SendVoiceData(byte[] vo_packet)
     {
+        //Debug.Log($"Sending {vo_packet.Length} bytes of voice data");
         Packet packet = new Packet();
         packet.header = Headers.data;
         packet.flag = Flags.Post.voice;
@@ -140,7 +141,7 @@ public class ConnectionManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"Error receiving TCP data: {e.Message} {e.StackTrace}");
+            Debug.LogError($"Error receiving TCP data: {e.GetType()} {e}");
         }
     }
     public void DisconnectFromServer()
@@ -151,6 +152,7 @@ public class ConnectionManager : MonoBehaviour
 
     public void ConnectToServer()
     {
+        client_self.name = $"PlayerName{UnityEngine.Random.Range(0, 25565)}";
         Connect(IPAddress.Parse(_IPAddress));
     }
     private void Start()
@@ -306,6 +308,11 @@ public class ConnectionManager : MonoBehaviour
         {
             int id = reader.ReadInt32();
             client_self.id = id;
+            Packet imHere = new Packet();
+            imHere.header = Headers.imHere;
+            imHere.flag = Flags.none;
+            imHere.AddToPayload(client_self.id);
+            imHere.Send(udp_handler.client,udp_handler.remoteEndPoint);
 
         }
     }
@@ -347,7 +354,7 @@ public class ConnectionManager : MonoBehaviour
         Packet hello = new Packet();
         hello.header = Headers.hello;
         hello.flag = Flags.none;
-        hello.AddToPayload("PlayerName123"); //TODO: Set up player name choosing system (add to packets!!!)
+        hello.AddToPayload(client_self.name); //TODO: Set up player name choosing system (add to packets!!!)
         hello.Send(stream);
 
         Packet lobby_list_request = new Packet();
@@ -384,13 +391,10 @@ public class ConnectionManager : MonoBehaviour
 
     private void ParseTransformData(Packet packet)
     {
-        
+     
         ThreadManager.ExecuteOnMainThread(() =>
-        {
-            foreach (ClientHandle test in clients)
-            {
-                Debug.Log($"Client in clients(ClientHandle) {test.id} : {test.name} {test.connectedPlayer}");
-            }
+        { 
+
             PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
             foreach (PlayerData player in json_.players) // for each player in recieved json
             {

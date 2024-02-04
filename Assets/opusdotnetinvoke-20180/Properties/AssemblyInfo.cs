@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("OpusWrapper")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("P/Opus")]
+[assembly: AssemblyDescription("libopus .NET Wrapper")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("OpusWrapper")]
-[assembly: AssemblyCopyright("Copyright © Microsoft 2012")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("")]
+[assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("c4689134-da2d-40a7-a876-a6b503b27f58")]
+[assembly: Guid("0080b4f3-722a-487c-b729-7fa9036da98a")]
 
 // Version information for an assembly consists of the following four values:
 //
