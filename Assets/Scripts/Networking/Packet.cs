@@ -193,12 +193,7 @@ public class Packet
 
     public void AddToPayload(byte[] value)
     {
-        using (MemoryStream memoryStream = new MemoryStream())
-        using (BinaryWriter writer = new BinaryWriter(memoryStream))
-        {
-            writer.Write(value);
-            payload = ConcatArrays(payload, memoryStream.ToArray());
-        }
+        payload = ConcatArrays(payload, value);
     }
 
     private byte[] ConcatArrays(byte[] array1, byte[] array2)

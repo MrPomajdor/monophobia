@@ -36,12 +36,15 @@ public class ConnectionManager : MonoBehaviour
     {
         Disconnect();
     }
-    public void PrintByteArray(byte[] bytes)
+    public void PrintByteArray(byte[] bytes, bool str = false)
     {
         var sb = new StringBuilder("new byte[] { ");
         foreach (var b in bytes)
         {
-            sb.Append(b + ", ");
+            if (!str)
+                sb.Append(b + ", ");
+            else
+                sb.Append((char)b + ", ");
         }
         sb.Append("}");
         Debug.Log(sb.ToString());
@@ -169,7 +172,7 @@ public class ConnectionManager : MonoBehaviour
         parser.RegisterHeaderProcessor(Headers.echo, ParseECHO);
         parser.RegisterHeaderProcessor(Headers.hello, HelloFromServer);
         parser.RegisterHeaderProcessor(Headers.data, ParseData);
-        parser.RegisterHeaderProcessor(Headers.rejected, ParseData);
+       // parser.RegisterHeaderProcessor(Headers.rejected, ParseData);
         parser.RegisterHeaderProcessor(Headers.disconnecting, ParseDisconnect);
     }
     
@@ -263,16 +266,35 @@ public class ConnectionManager : MonoBehaviour
     #region Non-json Data
     private void ParseVoiceData(Packet packet)
     {
+        int player_id = -1;
+        byte[] _pay;
         using (MemoryStream _stream = new MemoryStream(packet.payload))
         using (BinaryReader reader = new BinaryReader(_stream))
         {
-            int player_id = reader.ReadInt32();
-            ClientHandle cl = clients.FirstOrDefault(x => x.id == player_id);
-            byte[] _pay = packet.payload;
 
-            cl.connectedPlayer.voice.ReceiveAudioData(packet.payload.Skip(4).ToArray());
-
+            player_id = reader.ReadInt32();
+            int pay_len = reader.ReadInt32();
+            _pay = reader.ReadBytes(pay_len);
         }
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+
+            print($"AAA {player_id}");
+            if (player_id == client_self.id)
+                return;
+            ClientHandle cl = clients.FirstOrDefault(x => x.id == player_id);
+
+            if (cl != null)
+            {
+                cl.connectedPlayer.voice.InputPackets.Add(_pay);
+                //PrintByteArray(_pay,true);
+            }
+            else
+            {
+                print($"shit :c {player_id}");
+            }
+        });
+
     }
     private void ParseLobbyList(Packet packet)
     {

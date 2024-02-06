@@ -14,7 +14,7 @@ namespace POpusCodec
         //private string _version = string.Empty;
         private const int RecommendedMaxPacketSize = 4000;
         private int _frameSizePerChannel = 960;
-        private SamplingRate _inputSamplingRate = SamplingRate.Sampling48000;
+        public SamplingRate _inputSamplingRate = SamplingRate.Sampling48000;
         private Channels _inputChannels = Channels.Stereo;
 
         public SamplingRate InputSamplingRate
@@ -251,6 +251,7 @@ namespace POpusCodec
 
         public byte[] Encode(float[] pcmSamples)
         {
+            
             int size = Wrapper.opus_encode(_handle, pcmSamples, _frameSizePerChannel, writePacket);
 
             if (size <= 1) //DTX. Negative already handled at this point

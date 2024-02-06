@@ -1,159 +1,158 @@
+using POpusCodec;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using POpusCodec;
-using System;
-using System.Threading;
+using POpusCodec.Enums;
 
-[RequireComponent(typeof(AudioSource))]
-[RequireComponent(typeof(Player))]
+
+
 public class VoiceNetworking : MonoBehaviour
 {
+    public AudioSource micSource;
+    public AudioSource playSource;
 
-    public AudioSource audioSource { get; private set; }
-    ConnectionManager conMan;
-    public bool SendAudio = false;
-    private Player pl;
-    public bool mute_self;
-    ThreadManager thm;
-    POpusCodec.Enums.Channels opusChannels = POpusCodec.Enums.Channels.Mono;
-    POpusCodec.Enums.SamplingRate opusSamplingRate = POpusCodec.Enums.SamplingRate.Sampling48000;
+    List<float> micBuffer = new List<float>();
+    List<float> receiveBuffer = new List<float>();
+
+    public List<byte[]> PacketsReady { get; set; } = new List<byte[]>();
+    public List<byte[]> InputPackets { get; set; } = new List<byte[]>();
+
+    public SamplingRate samplerate = SamplingRate.Sampling48000;
+    public Channels opusChannels = Channels.Mono;
+    public Channels clipChannels = Channels.Mono;
+    public Delay delay = Delay.Delay40ms;
+    public bool shit;
     private OpusEncoder encoder;
-    private int packageSize;
     private OpusDecoder decoder;
-    List<float> micBuffer;
-    List<float> receiveBuffer;
+    private int frameSize;
 
+    float xd;
+    int dupa;
+    private float spierdalajxd;
+    public float lastMicVolume, lastRecievedVolume = 0;
+    public bool MuteSelf { get; set; }
+    public bool SendAudio { get; set; }
+
+    private bool firstTimeRecv = true;
+    public static float CalculateAverageVolume(float[] pcmData)
+    {
+        if (pcmData == null || pcmData.Length == 0 || pcmData.Length % 2 != 0)
+            return 0;
+
+        float sum = 0;
+        int sampleCount = pcmData.Length / 2;
+
+        for (int i = 0; i < pcmData.Length; i += 2)
+        {
+            // Convert two bytes to one short
+            float sample = pcmData[i];
+
+            // Add the absolute value to the sum
+            sum += Math.Abs(sample);
+        }
+
+        // Calculate the average volume
+        return (sum / sampleCount)*1000;
+    }
+
+    // Start is called before the first frame update
     void Start()
     {
-        receiveBuffer = new List<float>();
-        micBuffer = new List<float>();
-        thm = FindObjectOfType<ThreadManager>();
-        pl = GetComponent<Player>();
-        conMan = FindObjectOfType<ConnectionManager>();
 
-        audioSource = gameObject.GetComponent<AudioSource>();
-        if (!pl.playerInfo.isLocal)
+        if (SendAudio)
         {
-            AudioClip myClip = AudioClip.Create("Recieved", (int)opusSamplingRate, (int)opusChannels, (int)opusSamplingRate, true, OnAudioRead);
-            audioSource.loop = true;
-            audioSource.clip = myClip;
-            audioSource.Play();
-
-            decoder = new OpusDecoder(opusSamplingRate, opusChannels);
-            if (decoder == null)
-            {
-                Debug.LogError("Failed to create Opus decoder!");
-            }
-
+            //AUDIO INIT
+            micSource = gameObject.AddComponent<AudioSource>();
+            micSource.clip = Microphone.Start(null, true, 1, (int)samplerate);
+            micSource.loop = true;
+            micSource.Play();
         }
-        else
-        {//---------------------\/ LOCAL CODE--------------------------
+
+        playSource = Instantiate(new GameObject(), gameObject.transform).AddComponent<AudioSource>();
+        playSource.clip = AudioClip.Create("test", (int)samplerate * 2, (int)clipChannels, (int)samplerate, true, OnAudioPlaybackRead);
+        playSource.loop = true;
+        playSource.Play();
 
 
-            encoder = new OpusEncoder(opusSamplingRate, opusChannels);//, 1600, POpusCodec.Enums.OpusApplicationType.Voip);
-            encoder.EncoderDelay = POpusCodec.Enums.Delay.Delay20ms;
-            packageSize = encoder.FrameSizePerChannel * (int)opusChannels;
-            if (encoder == null)
-            {
-                Debug.LogError("Failed to create Opus encoder!");
-            }
-
-            StartMicrophone();
-        }
+        //ENCODING INIT
+        encoder = new OpusEncoder(samplerate, opusChannels, (int)samplerate * 2, POpusCodec.Enums.OpusApplicationType.Voip);
+        encoder.EncoderDelay = delay;
+        frameSize = encoder.FrameSizePerChannel * (int)opusChannels;
+        decoder = new OpusDecoder(samplerate, opusChannels);
+        
+        
     }
 
-
-
-    void StartMicrophone()
+    private void OnDisable()
     {
-        audioSource.clip = Microphone.Start(null, true, 1, AudioSettings.outputSampleRate);
-        audioSource.loop = true;
-        audioSource.Play();
+        Microphone.End(null);
     }
+    private void OnAudioPlaybackRead(float[] data)
+    {
+        if (receiveBuffer.Count < frameSize)
+            return;
+        int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
+        float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
+        dataBuf.CopyTo(data, 0);
+        print("Copied data");
+        receiveBuffer.RemoveRange(0, pullSize);
+
+        lastRecievedVolume = CalculateAverageVolume(dataBuf);
+
+        // clear rest of data
+        for (int i = pullSize; i < data.Length; i++)
+        {
+            data[i] = 0;
+        }
+
+    }
+
     void OnAudioFilterRead(float[] data, int channels)
     {
-        if (!mute_self)
-        {
-            // add mic data to buffer
-            micBuffer.AddRange(data);
-            //Debug.LogWarning(micBuffer.Count);
-            //if (micBuffer.Count > packageSize * 2)
+        if (MuteSelf || !SendAudio)
+            return;
 
-            //Debug.Log("OpusNetworked.OnAudioFilterRead: " + data.Length);
-        }
+        // add mic data to buffer
+        micBuffer.AddRange(data);
 
-        // clear array so we dont output any sound
+        lastMicVolume = CalculateAverageVolume(data);
         for (int i = 0; i < data.Length; i++)
         {
             data[i] = 0;
         }
+        Debug.Log("OpusNetworked.OnAudioFilterRead: " + data.Length);
+
+
     }
 
-    private void VoiceDownstream()
-    {
-        //TODO : please just do voicechat
-    }
-    void OnAudioRead(float[] data)
-    {
-        Debug.LogWarning("OnAudioRead!");
 
-        int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
-        float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
-        dataBuf.CopyTo(data, 0);
-        receiveBuffer.RemoveRange(0, pullSize);
+    void Update()
+    {
 
-        // clear rest of data
-        for (int i = pullSize; i < data.Length; i++)
+        
+
+        if (SendAudio && micBuffer.Count >= frameSize)
         {
-            data[i] = 0;
+            PacketsReady.Add(encoder.Encode(micBuffer.GetRange(0, frameSize).ToArray()));
+            micBuffer.RemoveRange(0, frameSize);
+        }
+        if (!SendAudio && InputPackets.Count > 0)
+        {
+            if (firstTimeRecv)
+            {
+                receiveBuffer.AddRange(decoder.DecodePacketLostFloat());
+                firstTimeRecv = false;
+            }
+            receiveBuffer.AddRange(decoder.DecodePacketFloat(InputPackets[0]));
+            InputPackets.RemoveAt(0);
         }
     }
-    public void ReceiveAudioData(byte[] data)
+
+    public byte[] GetPacket()
     {
-        ///Debug.LogWarning("Opustest.OnAudioRead: " + data.Length);
-
-        int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
-        float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
-        dataBuf.CopyTo(data, 0);
-        receiveBuffer.RemoveRange(0, pullSize);
-
-        // clear rest of data
-        for (int i = pullSize; i < data.Length; i++)
-        {
-            data[i] = 0;
-        }
-
-    }
-
-    private void OnAudioSetPosition(float[] data)
-    {
-    }
-    void OnDisable()
-    {
-        Microphone.End(null); // Stop the microphone
-    }
-
-    public bool DataAvailable()
-    {
-        return pl.playerInfo.isLocal && micBuffer.Count > packageSize;
-    }
-    public byte[] GetVoiceData()
-    {
-        //Debug.LogWarning(micBuffer.Count);
-        if (pl.playerInfo.isLocal && micBuffer.Count > packageSize)
-        {
-            float[] mic_data = micBuffer.GetRange(0, packageSize).ToArray();
-            //Debug.Log($"Non encoded len:{mic_data.Length} package size {packageSize}");
-            byte[] encodedData = encoder.Encode(mic_data);
-            //Debug.Log("encoded len " + encodedData.Length);
-            micBuffer.RemoveRange(0, packageSize);
-            return encodedData;
-
-        }
-        else
-        {
-            return null;
-        }
+        byte[] re = PacketsReady[0];
+        PacketsReady.RemoveAt(0);
+        return re;
     }
 }

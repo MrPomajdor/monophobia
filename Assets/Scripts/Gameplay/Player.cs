@@ -30,7 +30,7 @@ public class Player : MonoBehaviour
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nLast Packet time: {lastTime}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nLast Packet time: {lastTime}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nRECV VOL: {voice.lastRecievedVolume}", style);
     }
     void Update()
     {
@@ -60,10 +60,10 @@ public class Player : MonoBehaviour
             //voice
             if (playerInfo.isLocal)
             {
-                if (voice.DataAvailable())
+                if (voice.PacketsReady.Count>0)
                 {
                     //Debug.Log("Voice data avaliable!");
-                    conMan.SendVoiceData(voice.GetVoiceData());
+                    conMan.SendVoiceData(voice.GetPacket());
                 }
                 else
                 {
