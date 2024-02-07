@@ -25,7 +25,6 @@ public class ConnectionManager : MonoBehaviour
     [SerializeField]
     public List<ClientHandle> clients = new List<ClientHandle>();
     private LobbyManager lobbyManager;
-    bool inLobby = false;
     private PlayerInfo[] players;
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;

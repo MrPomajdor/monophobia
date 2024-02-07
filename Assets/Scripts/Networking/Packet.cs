@@ -79,7 +79,6 @@ public class Packet
         header = Headers.ack;
         flag = Flags.none;
         payload = new byte[] { };
-        Protocol protocol = Protocol.TCP;
     }
     public void DigestData(byte[] data)
     {

@@ -13,7 +13,7 @@ public class Player : MonoBehaviour
     public Rigidbody rb;
     public Vector3 real_velocity, position, rotation, target_velocity;
     public float lastTime;
-    public VoiceNetworking voice;
+    public VoiceManager voice;
     void Start()
     {
         rb = GetComponent<Rigidbody>();

@@ -391,15 +391,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ae984a80dd10604a898e2558683ae62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  micSource: {fileID: 0}
-  playSource: {fileID: 0}
+  mainAudioSource: {fileID: 0}
   samplerate: 48000
+  samplerateMic: 24000
   opusChannels: 1
   clipChannels: 2
   delay: 80
-  shit: 0
-  lastMicVolume: 0
-  lastRecievedVolume: 0
+  isLocal: 0
 --- !u!1 &7127683235911055367
 GameObject:
   m_ObjectHideFlags: 0

@@ -1859,6 +1859,7 @@ MonoBehaviour:
   micSource: {fileID: 0}
   playSource: {fileID: 0}
   samplerate: 48000
+  MicSampleRate: 48000
   opusChannels: 1
   clipChannels: 1
   delay: 80
@@ -2261,7 +2262,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1207918871}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 32bd4e905f95cc043aa53702f43d88ff, type: 3}
   m_Name: 
@@ -2269,6 +2270,7 @@ MonoBehaviour:
   micSource: {fileID: 0}
   playSource: {fileID: 0}
   samplerate: 48000
+  samplerateMic: 24000
   opusChannels: 1
   clipChannels: 2
   delay: 80

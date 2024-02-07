@@ -19,6 +19,7 @@ public class VoiceNetworking : MonoBehaviour
     public List<byte[]> InputPackets { get; set; } = new List<byte[]>();
 
     public SamplingRate samplerate = SamplingRate.Sampling48000;
+    public SamplingRate MicSampleRate = SamplingRate.Sampling48000;
     public Channels opusChannels = Channels.Mono;
     public Channels clipChannels = Channels.Mono;
     public Delay delay = Delay.Delay40ms;
@@ -35,6 +36,11 @@ public class VoiceNetworking : MonoBehaviour
     public bool SendAudio { get; set; }
 
     private bool firstTimeRecv = true;
+    private int pull;
+    private int pullCount;
+
+
+    private bool initialized = false;
     public static float CalculateAverageVolume(float[] pcmData)
     {
         if (pcmData == null || pcmData.Length == 0 || pcmData.Length % 2 != 0)
@@ -60,19 +66,26 @@ public class VoiceNetworking : MonoBehaviour
     void Start()
     {
 
-        if (SendAudio)
-        {
-            //AUDIO INIT
-            micSource = gameObject.AddComponent<AudioSource>();
-            micSource.clip = Microphone.Start(null, true, 1, (int)samplerate);
-            micSource.loop = true;
-            micSource.Play();
-        }
+    }
 
-        playSource = Instantiate(new GameObject(), gameObject.transform).AddComponent<AudioSource>();
-        playSource.clip = AudioClip.Create("test", (int)samplerate * 2, (int)clipChannels, (int)samplerate, true, OnAudioPlaybackRead);
-        playSource.loop = true;
-        playSource.Play();
+    public void Init()
+    {
+        //AUDIO INIT
+        micSource = gameObject.AddComponent<AudioSource>();
+
+        if (SendAudio)
+            micSource.clip = Microphone.Start(null, true, 1, (int)MicSampleRate);
+        else
+            micSource.clip = AudioClip.Create("Recv", (int)samplerate, (int)clipChannels, (int)samplerate, true);
+
+        micSource.loop = true;
+        micSource.Play();
+
+
+        //playSource = Instantiate(new GameObject(), gameObject.transform).AddComponent<AudioSource>();
+        //playSource.clip = AudioClip.Create("test", (int)samplerate * 2, (int)clipChannels, (int)samplerate, true, OnAudioPlaybackRead);
+        //playSource.loop = true;
+        //playSource.Play();
 
 
         //ENCODING INIT
@@ -80,64 +93,73 @@ public class VoiceNetworking : MonoBehaviour
         encoder.EncoderDelay = delay;
         frameSize = encoder.FrameSizePerChannel * (int)opusChannels;
         decoder = new OpusDecoder(samplerate, opusChannels);
-        
-        
     }
-
     private void OnDisable()
     {
         Microphone.End(null);
     }
     private void OnAudioPlaybackRead(float[] data)
     {
-        if (receiveBuffer.Count < frameSize)
-            return;
-        int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
-        float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
-        dataBuf.CopyTo(data, 0);
-        print("Copied data");
-        receiveBuffer.RemoveRange(0, pullSize);
-
-        lastRecievedVolume = CalculateAverageVolume(dataBuf);
-
-        // clear rest of data
-        for (int i = pullSize; i < data.Length; i++)
-        {
-            data[i] = 0;
-        }
+        //xd
 
     }
 
     void OnAudioFilterRead(float[] data, int channels)
     {
-        if (MuteSelf || !SendAudio)
+        if (!initialized)
             return;
-
-        // add mic data to buffer
-        micBuffer.AddRange(data);
-
-        lastMicVolume = CalculateAverageVolume(data);
-        for (int i = 0; i < data.Length; i++)
+        if (SendAudio)
         {
-            data[i] = 0;
+            if (MuteSelf)
+                return;
+            // add mic data to buffer
+            micBuffer.AddRange(data);
+
+            lastMicVolume = CalculateAverageVolume(data);
+            for (int i = 0; i < data.Length; i++)
+            {
+                data[i] = 0;
+            }
         }
-        Debug.Log("OpusNetworked.OnAudioFilterRead: " + data.Length);
+        else
+        {
 
+            pull += data.Length;
+            pullCount += 1;
+            int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
 
+            float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
+            dataBuf.CopyTo(data, 0);
+            print("Copied data");
+            receiveBuffer.RemoveRange(0, pullSize);
+
+            // clear rest of data
+            for (int i = pullSize; i < data.Length; i++)
+            {
+                data[i] = 0;
+            }
+        }
     }
 
 
     void Update()
     {
-
-        
-
-        if (SendAudio && micBuffer.Count >= frameSize)
+        if (!initialized)
+            return;
+        if (pullCount > 0)
+        {
+            int averageLen = (pull / pullCount);
+            if (receiveBuffer.Count / averageLen > 2) // remove audio from buffer that wont get played (delay removal)
+            {
+                receiveBuffer.RemoveRange(receiveBuffer.Count - averageLen - 1, averageLen);
+            }
+        }
+        if (SendAudio && micBuffer.Count >= frameSize) //encode microphone audio 
         {
             PacketsReady.Add(encoder.Encode(micBuffer.GetRange(0, frameSize).ToArray()));
             micBuffer.RemoveRange(0, frameSize);
         }
-        if (!SendAudio && InputPackets.Count > 0)
+        if (!SendAudio && InputPackets.Count > 0) //decode recieved 
         {
             if (firstTimeRecv)
             {

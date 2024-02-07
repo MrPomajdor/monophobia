@@ -16,6 +16,7 @@ public class spierdalaj : MonoBehaviour
     public List<byte[]> InputPackets { get; set; } = new List<byte[]>();
 
     public SamplingRate samplerate = SamplingRate.Sampling48000;
+    public SamplingRate samplerateMic = SamplingRate.Sampling48000;
     public Channels opusChannels = Channels.Mono;
     public Channels clipChannels = Channels.Mono;
     public Delay delay = Delay.Delay40ms;
@@ -23,11 +24,12 @@ public class spierdalaj : MonoBehaviour
     private OpusEncoder encoder;
     private OpusDecoder decoder;
     private int frameSize;
-
+    private int pull;
     float xd;
-    int dupa;
+    int pullCount;
     private float spierdalajxd;
 
+    
 
     public bool MuteSelf { get; set; }
 
@@ -36,8 +38,9 @@ public class spierdalaj : MonoBehaviour
     {
         //AUDIO INIT
         micSource = gameObject.AddComponent<AudioSource>();
-        micSource.clip = Microphone.Start(null, true, 1, (int)samplerate);
+        micSource.clip = Microphone.Start(null, true, 1, (int)samplerateMic);
         micSource.loop = true;
+        while (!(Microphone.GetPosition(null) > 0)) { Debug.Log("Waiting for mic..."); }
         micSource.Play();
         print($"mic source channels: {micSource.clip.channels}");
 
@@ -54,7 +57,7 @@ public class spierdalaj : MonoBehaviour
         frameSize = encoder.FrameSizePerChannel * (int)opusChannels;
 
         print($"opus freq: {(int)encoder._inputSamplingRate}");
-
+        micBuffer.Clear();
     }
 
     private void OnDisable()
@@ -65,19 +68,9 @@ public class spierdalaj : MonoBehaviour
     }
     private void OnAudioPlaybackRead(float[] data)
     {
-        if (receiveBuffer.Count < frameSize)
-            return;
-        int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
-        float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
-        dataBuf.CopyTo(data, 0);
-        print("Copied data");
-        receiveBuffer.RemoveRange(0, pullSize);
-
-        // clear rest of data
-        for (int i = pullSize; i < data.Length; i++)
-        {
-            data[i] = 0;
-        }
+        //if (receiveBuffer.Count < frameSize) bro frame size is for opus
+        //    return;
+        
 
     }
 
@@ -95,12 +88,34 @@ public class spierdalaj : MonoBehaviour
         {
             data[i] = 0;
         }
+
+
+        pull += data.Length;
+        pullCount += 1;
+        int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
+
+        float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
+        dataBuf.CopyTo(data, 0);
+        print("Copied data");
+        receiveBuffer.RemoveRange(0, pullSize);
+
+        // clear rest of data
+        for (int i = pullSize; i < data.Length; i++)
+        {
+            data[i] = 0;
+        }
     }
 
 
     void Update()
     {
-        
+        //if(micBuffer.Count > frameSize * 3)
+        //   micBuffer.RemoveAt(micBuffer.Count - 1);
+        int averageLen = (pull / pullCount);
+        if (receiveBuffer.Count / averageLen > 2)
+        {
+            receiveBuffer.RemoveRange(receiveBuffer.Count - averageLen - 1, averageLen);
+        }
         if (micBuffer.Count >= frameSize)
         {
             PacketsReady.Add(encoder.Encode(micBuffer.GetRange(0, frameSize).ToArray()));

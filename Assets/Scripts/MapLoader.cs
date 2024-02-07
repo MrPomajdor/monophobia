@@ -94,7 +94,7 @@ public class MapLoader : MonoBehaviour
             lcp.playerInfo.id = conMan.client_self.id;
             lcp.playerInfo.name = conMan.client_self.name;
             conMan.client_self.connectedPlayer = lcp;
-            lcp.voice.SendAudio = true;
+            lcp.voice.isLocal = true;
 
         }
         else
@@ -125,7 +125,7 @@ public class MapLoader : MonoBehaviour
         npl.playerInfo.isLocal = self;
         npl.playerInfo.id = self ? conMan.client_self.id : npl.playerInfo.id;
         npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
-        npl.voice.SendAudio = self;
+        npl.voice.isLocal = self;
         npl.cam.GetComponent<AudioListener>().enabled = false;
         ClientHandle binpl = new ClientHandle();
         binpl.id = self ? conMan.client_self.id : npl.playerInfo.id;

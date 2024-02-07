@@ -77,7 +77,7 @@ public class UDPHandler : MonoBehaviour
                 conMan.HandleData(data);
 
             }
-            catch(SocketException e)
+            catch(SocketException)
             {
                 //okay
             }
