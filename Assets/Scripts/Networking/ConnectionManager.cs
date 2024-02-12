@@ -24,7 +24,7 @@ public class ConnectionManager : MonoBehaviour
     public ClientHandle client_self = new ClientHandle();
     [SerializeField]
     public List<ClientHandle> clients = new List<ClientHandle>();
-    private LobbyManager lobbyManager;
+    private UI_LobbyManager lobbyManager;
     private PlayerInfo[] players;
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;
@@ -141,6 +141,11 @@ public class ConnectionManager : MonoBehaviour
 
             stream.BeginRead(recvBuffer, 0, dataBufferSize, ReceiveCallback, null);
         }
+        catch (IOException)
+        {
+            Debug.Log($"Disconnected by the server");
+            Disconnect();
+        }
         catch (Exception e)
         {
             Debug.LogError($"Error receiving TCP data: {e.GetType()} {e}");
@@ -154,14 +159,13 @@ public class ConnectionManager : MonoBehaviour
 
     public void ConnectToServer()
     {
-        client_self.name = $"PlayerName{UnityEngine.Random.Range(0, 25565)}";
-        Connect(IPAddress.Parse(_IPAddress));
+        
     }
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
 
-        lobbyManager = FindObjectOfType<LobbyManager>();
+        lobbyManager = FindObjectOfType<UI_LobbyManager>();
 
         parser = new PacketParser();
 
@@ -173,6 +177,10 @@ public class ConnectionManager : MonoBehaviour
         parser.RegisterHeaderProcessor(Headers.data, ParseData);
        // parser.RegisterHeaderProcessor(Headers.rejected, ParseData);
         parser.RegisterHeaderProcessor(Headers.disconnecting, ParseDisconnect);
+
+
+        client_self.name = $"PlayerName{UnityEngine.Random.Range(0, 25565)}";
+        Connect(IPAddress.Parse(_IPAddress));
     }
     
     public void HandleData(byte[] _data)
@@ -192,7 +200,8 @@ public class ConnectionManager : MonoBehaviour
         using (MemoryStream _stream = new MemoryStream(packet.payload))
         using (BinaryReader reader = new BinaryReader(_stream))
         {
-            string error = reader.ReadString(); //TODO: Display the error in the game
+            int pay_len = reader.ReadInt32();
+            string error = Encoding.UTF8.GetString(reader.ReadBytes(pay_len)); //TODO: Display the error in the game
             Debug.LogError($"REMOTE ERROR: {error}");
         }
     }
@@ -212,7 +221,9 @@ public class ConnectionManager : MonoBehaviour
             case var _ when packet.flag[0] == Flags.Response.voice[0]:
                 ParseVoiceData(packet);
                 break;
-
+            case var _ when packet.flag[0] == Flags.Response.lobbyListChanged[0]:
+                RequestLobbyList();
+                break;
             //-----------------------------JSON DATA-----------------------------
             case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
                 ParseLobbyInfo(packet);
@@ -233,6 +244,19 @@ public class ConnectionManager : MonoBehaviour
         join_packet.AddToPayload(id);
         join_packet.AddToPayload(password);
         join_packet.Send(stream);
+    }
+
+    public void CreateLobby(string name,int max_players,string password="")
+    {
+        Debug.Log($"Creatin lobby {name}");
+        Packet create = new Packet();
+        create.header = Headers.data;
+        create.flag = Flags.Post.createLobby;
+        create.AddToPayload(name);
+        create.AddToPayload(max_players);
+        create.AddToPayload(password!="");
+        create.AddToPayload(password);
+        create.Send(stream);
     }
 
     public void SendLocationInfo(Player player)
@@ -295,6 +319,15 @@ public class ConnectionManager : MonoBehaviour
         });
 
     }
+
+    private void RequestLobbyList()
+    {
+        //TODO: IMPORTANT! Check if player is in a lobby to avoid asking server for lobby list for no reason
+        Packet lobby_list_request = new Packet();
+        lobby_list_request.header = Headers.data;
+        lobby_list_request.flag = Flags.Request.lobbyList;
+        lobby_list_request.Send(stream);
+    }
     private void ParseLobbyList(Packet packet)
     {
         using (MemoryStream _stream = new MemoryStream(packet.payload))
@@ -302,8 +335,12 @@ public class ConnectionManager : MonoBehaviour
         {
             int amount = reader.ReadInt32();
             Debug.Log($"Lobby amount: {amount}");
+            lobbyManager.Clear();
             if (amount < 1)
+            {
+                lobbyManager.IndicateNoLobbies();
                 return;
+            }
             for(int i=0; i < amount; i++)
             {
 
@@ -315,7 +352,6 @@ public class ConnectionManager : MonoBehaviour
                 int current_players = reader.ReadInt32();
                 int max_players = reader.ReadInt32();
                 Debug.Log($"Lobby {i} name: {lobbyName}");
-                lobbyManager.Clear();
                 lobbyManager.AddLobbyToUI(lobby_id, lobbyName, max_players, current_players, protected_, this);
             }
         }
@@ -378,10 +414,7 @@ public class ConnectionManager : MonoBehaviour
         hello.AddToPayload(client_self.name); //TODO: Set up player name choosing system (add to packets!!!)
         hello.Send(stream);
 
-        Packet lobby_list_request = new Packet();
-        lobby_list_request.header = Headers.data;
-        lobby_list_request.flag = Flags.Request.lobbyList;
-        lobby_list_request.Send(stream);
+        RequestLobbyList();
     }
     #endregion
 
@@ -391,7 +424,7 @@ public class ConnectionManager : MonoBehaviour
         Debug.Log("Got lobby info");
         ThreadManager.ExecuteOnMainThread(() =>
         {
-            MapInfo mapInfo = packet.GetJson<MapInfo>();
+            LobbyInfo mapInfo = packet.GetJson<LobbyInfo>();
             if (mapInfo == null)
                 return;
             if (FindObjectOfType<MapLoader>().lobbyLoading) //I HATE MYSELF

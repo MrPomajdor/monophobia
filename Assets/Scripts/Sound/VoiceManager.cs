@@ -57,7 +57,7 @@ public class VoiceManager : MonoBehaviour
     void Start()
     {
         //AUDIO INIT
-        mainAudioSource = gameObject.AddComponent<AudioSource>();
+        mainAudioSource = gameObject.GetComponent<AudioSource>();
         if (isLocal)
         {
             mainAudioSource.clip = Microphone.Start(null, true, 1, (int)samplerateMic);

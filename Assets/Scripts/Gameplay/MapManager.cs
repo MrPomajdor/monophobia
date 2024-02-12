@@ -4,5 +4,5 @@ using UnityEngine;
 
 public class MapManager : MonoBehaviour
 {
-    public MapInfo mapInfo;
+    public LobbyInfo mapInfo;
 }

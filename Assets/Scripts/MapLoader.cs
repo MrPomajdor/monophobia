@@ -30,12 +30,12 @@ public class MapLoader : MonoBehaviour
         SceneManager.LoadScene("mainmenu", LoadSceneMode.Single);
     }
         
-    public void LoadMap(MapInfo mapInfo){
+    public void LoadMap(LobbyInfo mapInfo){
         StartCoroutine(LoadMapAsync(mapInfo));
         Debug.Log("Loading map");
     }
 
-    public void UpdateMap(MapInfo mapInfo) //WHAT
+    public void UpdateMap(LobbyInfo mapInfo) //WHAT
     {
         Debug.Log("Updating map------------------------");
         Debug.Log(conMan.clients.Count);
@@ -64,7 +64,7 @@ public class MapLoader : MonoBehaviour
         
     }
 
-    private IEnumerator LoadMapAsync(MapInfo mapInfo) //TODO: 23.01.2024 Configure the MapManager, and make the LoadMapAsync apply values from MapInfo object
+    private IEnumerator LoadMapAsync(LobbyInfo mapInfo) //TODO: 23.01.2024 Configure the MapManager, and make the LoadMapAsync apply values from MapInfo object
     {
         lobbyLoading = true; //god please please no why 
         ConnectionManager conMan = FindObjectOfType<ConnectionManager>();
@@ -82,19 +82,23 @@ public class MapLoader : MonoBehaviour
             foreach (PlayerInfo pl in mapInfo.players)
             {
                 if(pl.id!=conMan.client_self.id)
-                    CreatePlayer(pl);
+                    CreatePlayer(pl); //remote player creation
             }
-            //TODO: make that the local player loads everything (started)
             //TODO: make soimething to save settings and ever choose them.
-
-            //Here we should use the CreatePlayer function but i would have to do that and im lazy
-            GameObject local_player = Instantiate(PlayerPrefab);
+            //Here we should use the CreatePlayer function but IT WONT FUCKING WORK AND IM SICK OF IT
+            PlayerSpawnPosition[] spawns = FindObjectsOfType<PlayerSpawnPosition>();
+            PlayerSpawnPosition r_spawn_pos = spawns[UnityEngine.Random.Range(0, spawns.Length)];
+            GameObject local_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
             Player lcp = local_player.GetComponent<Player>();
             lcp.playerInfo.isLocal = true;
             lcp.playerInfo.id = conMan.client_self.id;
             lcp.playerInfo.name = conMan.client_self.name;
             conMan.client_self.connectedPlayer = lcp;
             lcp.voice.isLocal = true;
+
+
+
+
 
         }
         else
@@ -104,19 +108,28 @@ public class MapLoader : MonoBehaviour
         }
         lobbyLoading = false; //GOD DAMMIT
     }
-    void CreatePlayer(PlayerInfo pl, bool self=false) //27.01.2024
-                                                      //TODO: add every other variable that is to player.
-                                                      //the fuck this function gets called out of nowhere? Booooo...
-                                                      //no fr this time why the fuck this shit is getting called TWO FUCKING TIMES IN A ROW WHEN I CAN CLEARLY SEE LIKE IN THE DEBUGGER THAT IT SHOULD BE CALLED ONCE?
-                                                      //forgot to update. its working
-    {
-       if(conMan.clients.FirstOrDefault(x =>  x.id == pl.id) != null)
+    void CreatePlayer(PlayerInfo pl=null, bool self=false) //27.01.2024
+    {                                                      //TODO: add every other variable that is to player.
+                                                           //the fuck this function gets called out of nowhere? Booooo...
+                                                           //no fr this time why the fuck this shit is getting called TWO FUCKING TIMES IN A ROW WHEN I CAN CLEARLY SEE LIKE IN THE DEBUGGER THAT IT SHOULD BE CALLED ONCE?
+                                                           //forgot to update. its working
+                                                           //GOD DAMMIT SELF CREATING ISNT WORKING D:
+                                                           //and i wanna clarify - i know why this shit isn't working just i dont have the iron will to fix it xd
+        PlayerSpawnPosition[] spawns = FindObjectsOfType<PlayerSpawnPosition>();
+        if (spawns.Length == 0)
+        {
+            Debug.LogError("No spawn positions present on the map!");
+            return;
+        }
+        PlayerSpawnPosition r_spawn_pos = spawns[UnityEngine.Random.Range(0, spawns.Length)];
+
+        if (conMan.clients.FirstOrDefault(x =>  x.id == pl.id) != null)
         {
             Debug.LogWarning("Tried to create multiple player models with the same id");
             return;
         }
-        Debug.Log($"Creating player {pl.name} with id {pl.id} ({self})");
-        GameObject new_player = Instantiate(PlayerPrefab);
+        
+        GameObject new_player = Instantiate(PlayerPrefab,r_spawn_pos.transform.position,r_spawn_pos.transform.rotation);
         Player npl = new_player.GetComponent<Player>();
         npl.playerInfo = pl;
         npl.movement.enabled = self;
@@ -132,6 +145,10 @@ public class MapLoader : MonoBehaviour
         binpl.name = self ? conMan.client_self.name : npl.playerInfo.name;
         binpl.connectedPlayer = npl;
         conMan.clients.Add(binpl);
-        Debug.Log(conMan.clients.Count);
+        if (self)
+        {
+            conMan.client_self.connectedPlayer = npl;
+        }
+        Debug.Log($"Creating player {pl.name} with id {pl.id} ({self})");
     }
 }

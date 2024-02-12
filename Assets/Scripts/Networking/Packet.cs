@@ -51,6 +51,7 @@ public static class Flags
         public static byte[] lobbyList = new byte[] { 0x06 };
         public static byte[] error = new byte[] { 0xFF };
         public static byte[] closing_con = new byte[] { 0xF0 };
+        public static byte[] lobbyListChanged = new byte[] { 0x0A };
 
         public static byte[] transformData = new byte[] { 0xB0 };
         public static byte[] lobbyInfo = new byte[] { 0x09 };

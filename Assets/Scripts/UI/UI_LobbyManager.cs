@@ -3,9 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LobbyManager : MonoBehaviour
+public class UI_LobbyManager : MonoBehaviour
 {
     public GameObject LobbyPrefab;
+    public GameObject EmptyPrefab;
     ConnectionManager cmanager;
     public void Clear()
     {
@@ -45,5 +46,13 @@ public class LobbyManager : MonoBehaviour
             eventsClone.Invoke();
             eventsClone = null;
         }
+    }
+
+    public void IndicateNoLobbies()
+    {
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            Instantiate(EmptyPrefab, transform);
+        });
     }
 }
