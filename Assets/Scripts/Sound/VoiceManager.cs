@@ -32,6 +32,7 @@ public class VoiceManager : MonoBehaviour
     public float lastRecievedVolume { get; private set; }
 
     public bool MuteSelf { get; set; }
+    public float Sensitivity=5;
     public static float CalculateAverageVolume(float[] pcmData)
     {
         if (pcmData == null || pcmData.Length == 0 || pcmData.Length % 2 != 0)
@@ -98,8 +99,10 @@ public class VoiceManager : MonoBehaviour
         if (!MuteSelf && isLocal)
         {
             // add mic data to buffer
-            micBuffer.AddRange(data);
             lastMicVolume = CalculateAverageVolume(data);
+            if(lastMicVolume > Sensitivity)
+                micBuffer.AddRange(data);
+            
         }
 
         // clear array 

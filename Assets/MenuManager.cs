@@ -12,16 +12,20 @@ public class MenuManager : MonoBehaviour
     private MenuPage currentPage;
     ConnectionManager conMan;
 
-    void Start()
+    private void OnEnable()
     {
         pages = FindObjectsOfType<MenuPage>();
         foreach (MenuPage page in pages)
         {
             page.start_pos = page.transform.position; //save starting position
         }
+    }
+    void Start()
+    {
+        
 
 
-        ChangeMenu("main");
+        //ChangeMenu("main");
         HideAllPopups();
         conMan = FindObjectOfType<ConnectionManager>(); 
     }
@@ -35,7 +39,9 @@ public class MenuManager : MonoBehaviour
 
     public void ChangeMenu(string nm)
     {
-        
+        if(nm == null)
+        { Debug.LogError("[MenuManager] ChangeMenu argument can't be null"); return; }
+        Debug.Log($"Changing menu to {nm}");
         MenuPage pg = GetPage(nm);
         if(pg.type != MenuBlockType.FullScreen)
         {
@@ -63,7 +69,8 @@ public class MenuManager : MonoBehaviour
 
     public MenuPage GetPage(string nm)
     {
-        return pages.FirstOrDefault(x => x.menu_name.ToLower() == nm.ToLower()); ;
+        if(pages == null) { Debug.LogError("spierdalaj"); return null; };
+        return pages.FirstOrDefault(x => x.menu_name.ToLower() == nm.ToLower());
     }
 
     public void ShowPopup(string nm)

@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿
 using System;
 using System.Collections;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using Toolz;
-public class UDPHandler : MonoBehaviour
+public class UDPHandler : MonoBehaviour 
 {
     Thread receiveThread;
 

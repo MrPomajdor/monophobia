@@ -29,7 +29,7 @@ public class ConnectionManager : MonoBehaviour
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;
     private UDPHandler udp_handler;
-
+    private MenuManager menuManager;
 
     private void OnDisable()
     {
@@ -61,7 +61,7 @@ public class ConnectionManager : MonoBehaviour
 
     private void Connect(IPAddress ip, int port = 1338)
     {
-        
+        menuManager.ChangeMenu("connecting");
         socket = new TcpClient
         {
             ReceiveBufferSize = 2048,
@@ -98,6 +98,7 @@ public class ConnectionManager : MonoBehaviour
     }
     private void ConnectCallback(IAsyncResult asyncResult)
     {
+        
         if (!socket.Connected)
         {
             Debug.Log("Could not connect!");
@@ -105,7 +106,9 @@ public class ConnectionManager : MonoBehaviour
             return;
         }
         Debug.Log("Connected!");
+
         connected = true;
+        menuManager.ChangeMenu("main");
         //Debug.Log("Starting watchdog");
 
         //StartCoroutine(watchdog());
@@ -164,7 +167,7 @@ public class ConnectionManager : MonoBehaviour
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
-
+        menuManager = FindAnyObjectByType<MenuManager>();
         lobbyManager = FindObjectOfType<UI_LobbyManager>();
 
         parser = new PacketParser();
@@ -207,32 +210,34 @@ public class ConnectionManager : MonoBehaviour
     }
     private void ParseData(Packet packet)
     {
-        switch (packet.flag[0])
-        {
-            case var _ when packet.flag[0] == Flags.Response.idAssign[0]:
-                ParseIDAssign(packet);
-                break;
-            case var _ when packet.flag[0] == Flags.Response.playerList[0]:
-                ParsePlayerList(packet);
-                break;
-            case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
-                ParseLobbyList(packet);
-                break;
-            case var _ when packet.flag[0] == Flags.Response.voice[0]:
-                ParseVoiceData(packet);
-                break;
-            case var _ when packet.flag[0] == Flags.Response.lobbyListChanged[0]:
-                RequestLobbyList();
-                break;
-            //-----------------------------JSON DATA-----------------------------
-            case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
-                ParseLobbyInfo(packet);
-                break;
-            case var _ when packet.flag[0] == Flags.Response.transformData[0]:
-                ParseTransformData(packet);
-                break;
-        }
-
+        try
+        {  //TODO: dont forget to remove
+            switch (packet.flag[0])
+            {
+                case var _ when packet.flag[0] == Flags.Response.idAssign[0]:
+                    ParseIDAssign(packet);
+                    break;
+                case var _ when packet.flag[0] == Flags.Response.playerList[0]:
+                    ParsePlayerList(packet);
+                    break;
+                case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
+                    ParseLobbyList(packet);
+                    break;
+                case var _ when packet.flag[0] == Flags.Response.voice[0]:
+                    ParseVoiceData(packet);
+                    break;
+                case var _ when packet.flag[0] == Flags.Response.lobbyListChanged[0]:
+                    RequestLobbyList();
+                    break;
+                //-----------------------------JSON DATA-----------------------------
+                case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
+                    ParseLobbyInfo(packet);
+                    break;
+                case var _ when packet.flag[0] == Flags.Response.transformData[0]:
+                    ParseTransformData(packet);
+                    break;
+            }
+        }catch(Exception e) { Debug.Log($"{e.StackTrace}"); }
     }
     #region Assembling and Sending Packets
     public void JoinLobby(int id,string password="")

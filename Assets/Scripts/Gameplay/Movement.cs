@@ -21,6 +21,7 @@ public class Movement : MonoBehaviour
     public float airSpeed = 3f;
     public float sprintAdd;
     public float crouchSubtract;
+    public float GroundCheckHeight = 1.5f;
     float horMovement;
     float vertMovement;
     [Header("Physics")]
@@ -28,7 +29,7 @@ public class Movement : MonoBehaviour
     public float normalDrag;
     public float airDrag = 3;
     float add;
-
+    
     public Vector3 MoveDirection {
         get { return moveDirection; }
     }
@@ -60,6 +61,7 @@ public class Movement : MonoBehaviour
     [HideInInspector]
     public bool isMoving;
     public Player playersc;
+    float initialHeight;
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -68,7 +70,7 @@ public class Movement : MonoBehaviour
         og_offset = mouse.transform.localPosition;
         baseFOV = cam.fieldOfView;
         fov = baseFOV;
-
+        initialHeight = col.height;
     }
     
     public Vector3 GetAngles()
@@ -83,7 +85,7 @@ public class Movement : MonoBehaviour
     {
         
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, fov, Time.deltaTime * 10);
-        isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, GroundCheckHeight);
         horMovement = Input.GetAxisRaw("Horizontal");
         vertMovement = Input.GetAxisRaw("Vertical");
 
@@ -128,7 +130,7 @@ public class Movement : MonoBehaviour
         }
         else
         {
-            col.height = 2;
+            col.height = initialHeight;
             isCrouching = false;
 
         }
