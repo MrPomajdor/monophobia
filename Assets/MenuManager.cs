@@ -17,7 +17,7 @@ public class MenuManager : MonoBehaviour
         pages = FindObjectsOfType<MenuPage>();
         foreach (MenuPage page in pages)
         {
-            page.start_pos = page.transform.position; //save starting position
+            page.Hide();
         }
     }
     void Start()
@@ -25,7 +25,7 @@ public class MenuManager : MonoBehaviour
         
 
 
-        //ChangeMenu("main");
+        ChangeMenu("main");
         HideAllPopups();
         conMan = FindObjectOfType<ConnectionManager>(); 
     }
@@ -36,32 +36,43 @@ public class MenuManager : MonoBehaviour
     {
         
     }
-
-    public void ChangeMenu(string nm)
+    MenuPage pg=null;
+    public void ChangeMenu(string nm) //26.02.2024 WHY THE FUCK THIS STOPS FUCKING WORKING OUT OF NOWHERE WHEN I TRY TO ACCESS THE pg VARIABLE GOD DAMMIT
+                                      //TODO: Fix this piece of dogshit (ChangeMenu)
     {
         if(nm == null)
         { Debug.LogError("[MenuManager] ChangeMenu argument can't be null"); return; }
         Debug.Log($"Changing menu to {nm}");
-        MenuPage pg = GetPage(nm);
-        if(pg.type != MenuBlockType.FullScreen)
+        print($"gowno0");
+        pg = GetPage(nm);
+        print($"gowno1 {nm} found {pg}");
+
+        if (pg != null)
         {
-            Debug.LogError("[MenuMamanger] Use ShowPopup to show popups and not ChangeMenu.");
-            return;
-        }
-        if (pg != null) 
-        {
-            foreach (MenuPage page in pages)
+            print($"gowno2 {nm}");
+            if (pg.type != MenuBlockType.FullScreen)
+            {
+                Debug.LogError("[MenuMamanger] Use ShowPopup to show popups and not ChangeMenu.");
+                return;
+            }
+
+            print($"gowno3 {nm} {pages.Length} {pages}");
+
+            for (int i = 0; i < pages.Length; i++)
+            {
+                print($"GOWNO KURWA MAC");
+            }
+            /*foreach (MenuPage page in pages)
             {
                 if (page.type == MenuBlockType.Popup)
                     continue;
-                page.transform.position = new Vector3(page.start_pos.x + Screen.width, page.start_pos.y, page.start_pos.z);
-            }
 
-            if (currentPage != null)
-                currentPage.transform.position = new Vector3(pg.start_pos.x + Screen.width, pg.start_pos.y , pg.start_pos.z);
-            currentPage = pg;
-            currentPage.transform.position = pg.start_pos;
+                page.Hide();
+            }*/
+            pg.Show();
             pg.ClearInputs();
+            print($"gowno5 {nm}");
+            currentPage = pg;
         }
         else
             Debug.LogError($"[MenuManager] Page {nm} not found in scene");
@@ -69,8 +80,12 @@ public class MenuManager : MonoBehaviour
 
     public MenuPage GetPage(string nm)
     {
-        if(pages == null) { Debug.LogError("spierdalaj"); return null; };
-        return pages.FirstOrDefault(x => x.menu_name.ToLower() == nm.ToLower());
+        foreach (MenuPage page in pages)
+        {
+            if(page.menu_name == nm)
+                return page;
+        }
+        return null;
     }
 
     public void ShowPopup(string nm)
@@ -90,7 +105,7 @@ public class MenuManager : MonoBehaviour
         }
 
 
-        pg.transform.position = pg.start_pos;
+        pg.Show();
         pg.ClearInputs();
 
     }
@@ -100,7 +115,7 @@ public class MenuManager : MonoBehaviour
         foreach (MenuPage pg in pages)
         {
             if(pg.type == MenuBlockType.Popup)
-                pg.transform.position = new Vector3(pg.start_pos.x + Screen.width, pg.start_pos.y, pg.start_pos.z);
+                pg.Hide();
         }
     }
 

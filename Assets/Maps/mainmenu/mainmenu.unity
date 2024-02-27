@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 3.0319028, g: 2.1853793, b: 1.7878859, a: 1}
+  m_IndirectSpecularColor: {r: 3.0778909, g: 2.2587035, b: 1.904957, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1648,11 +1648,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   type: 1
   menu_name: lobby_creation
-  start_pos: {x: 0, y: 0, z: 0}
   fieldsToClear:
   - {fileID: 1836766307}
   - {fileID: 1371778416}
   - {fileID: 1024979012}
+  children: []
 --- !u!1 &555660785
 GameObject:
   m_ObjectHideFlags: 0
@@ -2445,7 +2445,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &956405030
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2464,7 +2464,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -165, y: 161}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1131.4, y: 636.4}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &956405031
@@ -2481,8 +2481,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   type: 0
   menu_name: connecting
-  start_pos: {x: 0, y: 0, z: 0}
   fieldsToClear: []
+  children: []
 --- !u!1 &963629248
 GameObject:
   m_ObjectHideFlags: 0
@@ -2924,8 +2924,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   type: 0
   menu_name: main
-  start_pos: {x: 0, y: 0, z: 0}
   fieldsToClear: []
+  children: []
 --- !u!1 &1024979010
 GameObject:
   m_ObjectHideFlags: 0
@@ -4819,7 +4819,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -289.5, y: -333.70334}
+  m_AnchoredPosition: {x: -289.5, y: -333.70294}
   m_SizeDelta: {x: 579.01, y: 667.406}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1741867134

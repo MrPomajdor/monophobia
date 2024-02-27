@@ -14,8 +14,19 @@ public class MenuPage : MonoBehaviour
 {
     public MenuBlockType type;
     public string menu_name;
-    public Vector3 start_pos;
     public List<TMP_InputField> fieldsToClear = new List<TMP_InputField>();
+    [SerializeField]
+    private List<Transform> children  = new List<Transform>();
+
+
+    void OnEnable()
+    {
+        foreach(Transform t in transform)
+        {
+            children.Add(t);
+        }
+            
+    }
     public void ClearInputs()
     {
         foreach (TMP_InputField field in fieldsToClear)
@@ -25,10 +36,21 @@ public class MenuPage : MonoBehaviour
     }
     public void Hide()
     {
-        if (type == MenuBlockType.Popup)
-            transform.position = new Vector3(transform.position.x + Screen.width, transform.position.y, transform.position.z);
-        else
-            Debug.Log("Can't close a full-screen menu!");
-        
+        foreach (Transform child in children)
+        {
+            print($"hiding {child.name}");
+            child.gameObject.SetActive(false);
+        }
+
+    }
+
+    public void Show()
+    {
+        print("SHOW!");
+        foreach (Transform child in children)
+        {
+            print($"showing {child.name}");
+            child.gameObject.SetActive(true);
+        }
     }
 }

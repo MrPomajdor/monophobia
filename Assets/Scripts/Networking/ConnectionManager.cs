@@ -10,6 +10,7 @@ using System.Net.NetworkInformation;
 using System.Linq;
 using System.IO;
 using System.Text;
+using Steamworks;
 
 public class ConnectionManager : MonoBehaviour
 {
@@ -61,7 +62,7 @@ public class ConnectionManager : MonoBehaviour
 
     private void Connect(IPAddress ip, int port = 1338)
     {
-        menuManager.ChangeMenu("connecting");
+        //menuManager.ChangeMenu("connecting");
         socket = new TcpClient
         {
             ReceiveBufferSize = 2048,
@@ -108,7 +109,7 @@ public class ConnectionManager : MonoBehaviour
         Debug.Log("Connected!");
 
         connected = true;
-        menuManager.ChangeMenu("main");
+        //menuManager.ChangeMenu("main");
         //Debug.Log("Starting watchdog");
 
         //StartCoroutine(watchdog());
@@ -166,7 +167,10 @@ public class ConnectionManager : MonoBehaviour
     }
     private void Start()
     {
-        DontDestroyOnLoad(gameObject);
+        if (SteamManager.Initialized)
+        {
+        }
+            DontDestroyOnLoad(gameObject);
         menuManager = FindAnyObjectByType<MenuManager>();
         lobbyManager = FindObjectOfType<UI_LobbyManager>();
 
@@ -264,7 +268,7 @@ public class ConnectionManager : MonoBehaviour
         create.Send(stream);
     }
 
-    public void SendLocationInfo(Player player)
+    public void SendPlayerLocationInfo(Player player)
     {
         Transforms transforms_ = new Transforms();
         transforms_.position = player.transform.position;

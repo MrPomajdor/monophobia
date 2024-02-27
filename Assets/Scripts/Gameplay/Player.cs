@@ -74,7 +74,7 @@ public class Player : MonoBehaviour
             //periodic position sending
             if (lt2 > 0.15f)
             {
-                conMan.SendLocationInfo(this);
+                conMan.SendPlayerLocationInfo(this);
                 lt2 = 0;
             }
         }
