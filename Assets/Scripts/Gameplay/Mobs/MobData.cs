@@ -15,12 +15,12 @@ public enum Behaviour
 
 public enum Aggressivity
 {
-    Passive,
-    Calm,
-    MildlyInconvenienced,
-    Annoyed,
-    Angry,
-    WillKill
+    Passive = 1,
+    Calm = 2,
+    MildlyInconvenienced = 3,
+    Annoyed = 4,
+    Angry = 5,
+    WillKill = 6
 }
 public enum TargetSelectionMode
 {
@@ -28,6 +28,11 @@ public enum TargetSelectionMode
     Closest,
     Farthest,
     TargetInFOV
+}
+public enum TargetPointMode
+{
+    Point,
+    Player
 }
 public enum Personality
 {
@@ -46,7 +51,11 @@ public class MobData : ScriptableObject
     public Behaviour UnfocusedBehaviour;
     public Aggressivity aggresivness;
     public TargetSelectionMode targetSelectionMode;
+    public TargetPointMode targetPointMode;
     public Personality personality;
     public bool WillJumpscare;
+    public float WanderRange;
+    public float WalkSpeed=1;
+    public float RunSpeed=1;
 
 }

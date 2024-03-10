@@ -11,7 +11,7 @@ public class Player : MonoBehaviour
     public Movement movement;
     ConnectionManager conMan;
     public Rigidbody rb;
-    public Vector3 real_velocity, position, rotation, target_velocity;
+    public Transforms transforms;
     public float lastTime;
     public VoiceManager voice;
     void Start()
@@ -21,7 +21,7 @@ public class Player : MonoBehaviour
     }
     Vector3 prev, prevrot;
     // Update is called once per frame
-    float lt, lt2;
+    float lt2;
     bool s;
     GUIStyle style = new GUIStyle();
     private void OnGUI()
@@ -30,29 +30,16 @@ public class Player : MonoBehaviour
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nLast Packet time: {lastTime}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nRECV VOL: {voice.lastRecievedVolume}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nRECV VOL: {voice.lastRecievedVolume}", style);
     }
     void Update()
     {
         
 
-        lt += Time.deltaTime;
         lt2 += Time.deltaTime;
         if (!playerInfo.isLocal)
         {  //-----------------------------------------REMOTE CODE------------------------------------------------
-            //Vector3 predictedPos = transform.position + (target_velocity * (lastTime-Time.realtimeSinceStartup));
-
-            transform.rotation = Quaternion.Euler(0, rotation.y, 0);
-            rb.velocity = real_velocity;
-            rb.velocity +=  position - transform.position;
-            rb.velocity += target_velocity;
-            if (Vector3.Distance(transform.position, position) > 2)
-                transform.position = position;
-            
-
-
-
-
+            Tools.UpdatePos(transform, rb, transforms,true); 
         }
         else
         {  //-----------------------------------------LOCAL CODE-------------------------------------------------

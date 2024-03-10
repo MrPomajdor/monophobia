@@ -36,6 +36,7 @@ public class MapLoader : MonoBehaviour
     }
 
     public void UpdateMap(LobbyInfo mapInfo) //WHAT
+                                             //TODO: Detect when lobby owner changes and change it localy
     {
         Debug.Log("Updating map------------------------");
         Debug.Log(conMan.clients.Count);
@@ -79,22 +80,35 @@ public class MapLoader : MonoBehaviour
 
             mapManager = FindObjectOfType<MapManager>();
             mapManager.mapInfo = mapInfo;
+            bool isSelfHost=false;
             foreach (PlayerInfo pl in mapInfo.players)
             {
-                if(pl.id!=conMan.client_self.id)
+                if (pl.id != conMan.client_self.id) //check if player is local
                     CreatePlayer(pl); //remote player creation
+                else
+                {
+                    isSelfHost = pl.isHost;
+                    print("LOCAL PLAYER IS A HOST");
+                }
             }
             //TODO: make soimething to save settings and ever choose them.
             //Here we should use the CreatePlayer function but IT WONT FUCKING WORK AND IM SICK OF IT
             PlayerSpawnPosition[] spawns = FindObjectsOfType<PlayerSpawnPosition>();
+            if (spawns.Length == 0)
+            {
+                Debug.LogError("No spawn positions present on the map!");
+                yield break;
+            }
             PlayerSpawnPosition r_spawn_pos = spawns[UnityEngine.Random.Range(0, spawns.Length)];
             GameObject local_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
             Player lcp = local_player.GetComponent<Player>();
             lcp.playerInfo.isLocal = true;
             lcp.playerInfo.id = conMan.client_self.id;
             lcp.playerInfo.name = conMan.client_self.name;
+            lcp.playerInfo.isHost = isSelfHost;
             conMan.client_self.connectedPlayer = lcp;
             lcp.voice.isLocal = true;
+ 
 
 
 
@@ -136,6 +150,7 @@ public class MapLoader : MonoBehaviour
         npl.cam.enabled = self;
         npl.movement.enabled = self;
         npl.playerInfo.isLocal = self;
+        npl.playerInfo.isHost = pl.isHost;
         npl.playerInfo.id = self ? conMan.client_self.id : npl.playerInfo.id;
         npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
         npl.voice.isLocal = self;

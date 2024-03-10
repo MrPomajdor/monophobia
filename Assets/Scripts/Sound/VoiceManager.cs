@@ -62,7 +62,7 @@ public class VoiceManager : MonoBehaviour
         if (isLocal)
         {
             mainAudioSource.clip = Microphone.Start(null, true, 1, (int)samplerateMic);
-            while (!(Microphone.GetPosition(null) > 0)) { Debug.Log("Waiting for mic..."); }
+            while (!(Microphone.GetPosition(null) > 0)) { /*nop*/ }
         }
         else 
             mainAudioSource.clip = AudioClip.Create("recv", (int)samplerate * 2, (int)clipChannels, (int)samplerate, true, OnAudioPlaybackRead);
@@ -119,7 +119,6 @@ public class VoiceManager : MonoBehaviour
 
             float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
             dataBuf.CopyTo(data, 0);
-            print("Copied data");
             receiveBuffer.RemoveRange(0, pullSize);
 
             // clear rest of data

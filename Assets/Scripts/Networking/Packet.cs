@@ -31,7 +31,7 @@ public static class Flags
     {
         public static byte[] playerList = new byte[]{ 0x04 };
         public static byte[] lobbyList = new byte[]{ 0x07 };
-
+        public static byte[] worldState = new byte[] { 0xD0 };
     }
     public static class Post
     {
@@ -39,8 +39,10 @@ public static class Flags
         public static byte[] createLobby = new byte[] { 0x11 };
         public static byte[] updateLobbyInfo = new byte[] { 0x10 };
 
-        public static byte[] transformData = new byte[] { 0xA0 };
+        public static byte[] playerTransformData = new byte[] { 0xA0 };
         public static byte[] lobbyInfo = new byte[] { 0xA1 };
+        public static byte[] worldState = new byte[] { 0xA2 };
+        public static byte[] itemPos = new byte[] { 0xA3 };
         public static byte[] voice = new byte[] { 0xAC };
 
     }
@@ -52,9 +54,12 @@ public static class Flags
         public static byte[] error = new byte[] { 0xFF };
         public static byte[] closing_con = new byte[] { 0xF0 };
         public static byte[] lobbyListChanged = new byte[] { 0x0A };
+        public static byte[] lobbyClosing = new byte[] { 0xF1 };
 
         public static byte[] transformData = new byte[] { 0xB0 };
         public static byte[] lobbyInfo = new byte[] { 0x09 };
+        public static byte[] worldState = new byte[] { 0xC2 };
+        public static byte[] itemData = new byte[] { 0xC3 };
         public static byte[] voice = new byte[] { 0x0C };
 
     }

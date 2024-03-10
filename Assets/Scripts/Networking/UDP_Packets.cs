@@ -1,4 +1,5 @@
 ﻿
+using JetBrains.Annotations;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -33,7 +34,6 @@ public class PlayerData
 }
 
 
-
 [Serializable]
 public class Transforms
 {
@@ -54,6 +54,23 @@ public class PlayersDataPacket
 }
 
 
+[Serializable]
+public class ObjectPositionData
+{
+    public string type = "ObjectPositionData";
+    public int id;
+    public Transforms transforms;
+
+}
 
 
+[Serializable]
+public class MobDataPacket
+{
+    public string type = "MobData";
+    public int id;
+    public Transforms transforms;
+    public Transform target_tr;
+    public Vector3 target_vec;
 
+}

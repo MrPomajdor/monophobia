@@ -10,6 +10,7 @@ public class ClientHandle
     public int health=100;
     public string name;
     public Player connectedPlayer;
+    public LobbyInfo lobbyInfo;
     public PlayerInfo ToPlayerInfo()
     {
         return new PlayerInfo { id = id, name = name };

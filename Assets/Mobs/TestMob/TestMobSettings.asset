@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42c28c58a32587d43b909b16073a9244, type: 3}
+  m_Name: TestMobSettings
+  m_EditorClassIdentifier: 
+  mobName: TestMob
+  health: 1
+  maxHealth: 1
+  FocusedBehaviour: 0
+  UnfocusedBehaviour: 0
+  aggresivness: 6
+  targetSelectionMode: 2
+  targetPointMode: 1
+  personality: 1
+  WillJumpscare: 0
+  WanderRange: 20
+  WalkSpeed: 1
+  RunSpeed: 1

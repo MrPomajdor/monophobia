@@ -1,19 +1,42 @@
 
+using Steamworks;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Net;
-using System.Threading;
-using UnityEngine;
-using System;
-using System.Net.NetworkInformation;
-using System.Linq;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
-using Steamworks;
+using UnityEngine;
+using static UnityEditor.FilePathAttribute;
+using UnityEngine.UIElements;
 
+public static class Tools
+{
+    public static void UpdatePos(Transform transform,Rigidbody rb, Transforms transforms,bool player=false)
+    {
+        if(!player) transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z); 
+        else        transform.rotation = Quaternion.Euler(0, transforms.rotation.y, 0);
+        rb.velocity = transforms.real_velocity;
+        rb.velocity += transforms.position - transform.position;
+        rb.velocity += transforms.target_velocity;
+        if (Vector3.Distance(transform.position, transforms.position) > 2)
+            transform.position = transforms.position;
+    }
+}
+[Serializable]
+public class WorldState
+{
+    public List<ItemStruct> Items = new List<ItemStruct>();
+    //TODO: Add mobs
+}
 public class ConnectionManager : MonoBehaviour
 {
+
+    private WorldState worldState = new WorldState();
+    public List<Item> items = new List<Item>();
+
     public string _IPAddress = "127.0.0.1";
     public PacketParser parser;
     private TcpClient socket;
@@ -31,10 +54,50 @@ public class ConnectionManager : MonoBehaviour
     private event Action eventsClone;
     private UDPHandler udp_handler;
     private MenuManager menuManager;
+    public bool IsSelfHost { get { return this.client_self.connectedPlayer.playerInfo.isHost; } }
 
     private void OnDisable()
     {
         Disconnect();
+        worldState.Items.Clear();
+    }
+
+    private void UpdateWorldState(WorldState newWorldState)
+    {
+        if (worldState.Equals(newWorldState))
+            return;
+
+        ItemStruct[] itemsToRemove = worldState.Items.Except(newWorldState.Items).ToArray();
+        ItemStruct[] newItems = newWorldState.Items.Except(worldState.Items).ToArray();
+        Item[] itemLoaded = FindObjectsByType<Item>(FindObjectsSortMode.None);
+        if (itemsToRemove.Length>0)
+            foreach(ItemStruct item in itemsToRemove)
+            {
+                Item x = itemLoaded.FirstOrDefault(x  => x.item.id == item.id);
+                if(x != null)
+                    Destroy(x.gameObject);
+            }
+        
+        if(newItems.Length>0)
+            foreach(ItemStruct item in newItems)
+            {
+                GameObject itemObject = Instantiate(Resources.Load<GameObject>(item.name));
+
+                Item itemObjectScript = itemObject.GetComponent<Item>();
+                itemObjectScript.item = item;
+            }
+
+        worldState = newWorldState;
+        //TODO: Add mobs
+    }
+
+
+    private void UpdateItemPos(ItemPosData itemPosData)
+    {
+        Item itm = items.FirstOrDefault(x => x.item.id == itemPosData.id);
+        if (itm == null)
+            return;
+        itm.transforms = itemPosData.transforms;
     }
     public void PrintByteArray(byte[] bytes, bool str = false)
     {
@@ -89,7 +152,7 @@ public class ConnectionManager : MonoBehaviour
     private void SendRawData(byte[] data)
     {
         Debug.Log("Sending data...");
-        if(socket == null)
+        if (socket == null)
         {
             Debug.Log("Sending failed! (socket is null)");
             return;
@@ -99,7 +162,7 @@ public class ConnectionManager : MonoBehaviour
     }
     private void ConnectCallback(IAsyncResult asyncResult)
     {
-        
+
         if (!socket.Connected)
         {
             Debug.Log("Could not connect!");
@@ -118,7 +181,7 @@ public class ConnectionManager : MonoBehaviour
 
         stream = socket.GetStream();
         recvBuffer = new byte[dataBufferSize];
-        
+
 
 
         stream.BeginRead(recvBuffer, 0, dataBufferSize, ReceiveCallback, null);
@@ -163,88 +226,84 @@ public class ConnectionManager : MonoBehaviour
 
     public void ConnectToServer()
     {
-        
+
     }
     private void Start()
     {
-        if (SteamManager.Initialized)
+        if (SteamManager.Initialized) //TODO: IMPORTANT!!! Handle when steam isn't running
         {
+            Debug.Log($"Steam username: {SteamFriends.GetPersonaName()}");
         }
-            DontDestroyOnLoad(gameObject);
+        else
+        {
+            Debug.LogError("Steam not initialized!");
+        }
+        DontDestroyOnLoad(gameObject);
         menuManager = FindAnyObjectByType<MenuManager>();
         lobbyManager = FindObjectOfType<UI_LobbyManager>();
 
         parser = new PacketParser();
 
         udp_handler = FindObjectOfType<UDPHandler>();
-        
+
         parser.RegisterHeaderProcessor(Headers.ack, ParseACK);
         parser.RegisterHeaderProcessor(Headers.echo, ParseECHO);
         parser.RegisterHeaderProcessor(Headers.hello, HelloFromServer);
         parser.RegisterHeaderProcessor(Headers.data, ParseData);
-       // parser.RegisterHeaderProcessor(Headers.rejected, ParseData);
+        parser.RegisterHeaderProcessor(Headers.rejected, ParseRejection);
         parser.RegisterHeaderProcessor(Headers.disconnecting, ParseDisconnect);
 
 
-        client_self.name = $"PlayerName{UnityEngine.Random.Range(0, 25565)}";
+        client_self.name = $"{SteamFriends.GetPersonaName()}";
         Connect(IPAddress.Parse(_IPAddress));
     }
-    
+
+
     public void HandleData(byte[] _data)
     {
         parser.DigestMessage(_data);
     }
 
-    private void ParseRejection(Packet packet)
-    //friendzone :c
-    {
-        if (packet.flag[0] == Flags.Response.closing_con[0])
-        {
-            FindObjectOfType<MapLoader>().ReturnToMenu();
-            Disconnect();
-            return;
-        }
-        using (MemoryStream _stream = new MemoryStream(packet.payload))
-        using (BinaryReader reader = new BinaryReader(_stream))
-        {
-            int pay_len = reader.ReadInt32();
-            string error = Encoding.UTF8.GetString(reader.ReadBytes(pay_len)); //TODO: Display the error in the game
-            Debug.LogError($"REMOTE ERROR: {error}");
-        }
-    }
+    
     private void ParseData(Packet packet)
     {
-        try
-        {  //TODO: dont forget to remove
-            switch (packet.flag[0])
-            {
-                case var _ when packet.flag[0] == Flags.Response.idAssign[0]:
-                    ParseIDAssign(packet);
-                    break;
-                case var _ when packet.flag[0] == Flags.Response.playerList[0]:
-                    ParsePlayerList(packet);
-                    break;
-                case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
-                    ParseLobbyList(packet);
-                    break;
-                case var _ when packet.flag[0] == Flags.Response.voice[0]:
-                    ParseVoiceData(packet);
-                    break;
-                case var _ when packet.flag[0] == Flags.Response.lobbyListChanged[0]:
-                    RequestLobbyList();
-                    break;
-                //-----------------------------JSON DATA-----------------------------
-                case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
-                    ParseLobbyInfo(packet);
-                    break;
-                case var _ when packet.flag[0] == Flags.Response.transformData[0]:
-                    ParseTransformData(packet);
-                    break;
-            }
-        }catch(Exception e) { Debug.Log($"{e.StackTrace}"); }
+        //try
+        //{  //TODO: handle all errors for ParseData() inside - do not fucking use a try catch
+        switch (packet.flag[0])
+        {
+            case var _ when packet.flag[0] == Flags.Response.idAssign[0]:
+                ParseIDAssign(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.playerList[0]:
+                ParsePlayerList(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
+                ParseLobbyList(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.voice[0]:
+                ParseVoiceData(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.lobbyListChanged[0]:
+                RequestLobbyList();
+                break;
+            //-----------------------------JSON DATA-----------------------------
+            case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
+                ParseLobbyInfo(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.transformData[0]:
+                ParseTransformData(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.worldState[0]:
+                ParseWorldStateData(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.itemData[0]:
+                ParseItemPosition(packet);
+                break;
+        }
+        //}catch(Exception e) { Debug.LogError($"{e}"); Debug.Log($"Error parsing packet {packet.header[0]}{packet.header[1]}{packet.flag[0]}{e.StackTrace} "); }
     }
     #region Assembling and Sending Packets
-    public void JoinLobby(int id,string password="")
+    public void JoinLobby(int id, string password = "")
     {
         Debug.Log($"Joining lobby {id}");
         Packet join_packet = new Packet();
@@ -255,7 +314,7 @@ public class ConnectionManager : MonoBehaviour
         join_packet.Send(stream);
     }
 
-    public void CreateLobby(string name,int max_players,string password="")
+    public void CreateLobby(string name, int max_players, string password = "")
     {
         Debug.Log($"Creatin lobby {name}");
         Packet create = new Packet();
@@ -263,17 +322,14 @@ public class ConnectionManager : MonoBehaviour
         create.flag = Flags.Post.createLobby;
         create.AddToPayload(name);
         create.AddToPayload(max_players);
-        create.AddToPayload(password!="");
+        create.AddToPayload(password != "");
         create.AddToPayload(password);
         create.Send(stream);
     }
 
     public void SendPlayerLocationInfo(Player player)
     {
-        Transforms transforms_ = new Transforms();
-        transforms_.position = player.transform.position;
-        transforms_.target_velocity = player.movement.MoveDirection;
-        transforms_.real_velocity = player.rb.velocity;
+        Transforms transforms_ = player.transforms;
         transforms_.rotation = player.movement.GetAngles();
 
         PlayerData playerData = new PlayerData();
@@ -287,15 +343,65 @@ public class ConnectionManager : MonoBehaviour
         string mes = JsonUtility.ToJson(playerData);
         Packet packet = new Packet();
         packet.header = Headers.data;
-        packet.flag = Flags.Post.transformData;
+        packet.flag = Flags.Post.playerTransformData;
         packet.AddToPayload(mes);
-        packet.Send(udp_handler.client,udp_handler.remoteEndPoint);
+        packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
+    }
+
+    public void SendItemLocationInfo(Item item)
+    {
+        Transforms transforms_ = item.transforms;
+        ItemPosData itemPosData = new ItemPosData();
+        itemPosData.transforms = transforms_;
+        itemPosData.id = item.item.id;
+
+
+        string mes = JsonUtility.ToJson(itemPosData);
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Post.itemPos;
+        packet.AddToPayload(mes);
+        packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
+    }
+
+    public void SendWorldState()
+    {
+        if (client_self == null)
+            return;
+        if (!IsSelfHost)
+            return;
+
+        string mes = JsonUtility.ToJson(worldState);
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Post.worldState;
+        packet.AddToPayload(mes);
+        packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
     }
     #endregion
 
     #region Parsing Incoming Packets
 
     #region Non-json Data
+    private void ParseRejection(Packet packet)
+    //friendzone :c
+    {
+        if (packet.flag[0] == Flags.Response.closing_con[0] || packet.flag[0] == Flags.Response.lobbyClosing[0])
+        {
+            FindObjectOfType<MapLoader>().ReturnToMenu();
+            Disconnect();
+            return;
+        }
+        if (packet.payload.Length < 4)
+            return;//no payload, no error message
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+            int pay_len = reader.ReadInt32();
+            string error = Encoding.UTF8.GetString(reader.ReadBytes(pay_len)); //TODO: Display the error in the game
+            Debug.LogError($"REMOTE ERROR: {error}");
+        }
+    }
     private void ParseVoiceData(Packet packet)
     {
         int player_id = -1;
@@ -311,27 +417,21 @@ public class ConnectionManager : MonoBehaviour
         ThreadManager.ExecuteOnMainThread(() =>
         {
 
-            print($"AAA {player_id}");
             if (player_id == client_self.id)
                 return;
             ClientHandle cl = clients.FirstOrDefault(x => x.id == player_id);
 
             if (cl != null)
-            {
                 cl.connectedPlayer.voice.InputPackets.Add(_pay);
-                //PrintByteArray(_pay,true);
-            }
-            else
-            {
-                print($"shit :c {player_id}");
-            }
         });
 
     }
 
     private void RequestLobbyList()
     {
-        //TODO: IMPORTANT! Check if player is in a lobby to avoid asking server for lobby list for no reason
+        if (client_self.lobbyInfo == null)
+            return;
+
         Packet lobby_list_request = new Packet();
         lobby_list_request.header = Headers.data;
         lobby_list_request.flag = Flags.Request.lobbyList;
@@ -339,6 +439,7 @@ public class ConnectionManager : MonoBehaviour
     }
     private void ParseLobbyList(Packet packet)
     {
+
         using (MemoryStream _stream = new MemoryStream(packet.payload))
         using (BinaryReader reader = new BinaryReader(_stream))
         {
@@ -350,7 +451,7 @@ public class ConnectionManager : MonoBehaviour
                 lobbyManager.IndicateNoLobbies();
                 return;
             }
-            for(int i=0; i < amount; i++)
+            for (int i = 0; i < amount; i++)
             {
 
                 int lobby_id = reader.ReadInt32();
@@ -378,7 +479,7 @@ public class ConnectionManager : MonoBehaviour
             imHere.header = Headers.imHere;
             imHere.flag = Flags.none;
             imHere.AddToPayload(client_self.id);
-            imHere.Send(udp_handler.client,udp_handler.remoteEndPoint);
+            imHere.Send(udp_handler.client, udp_handler.remoteEndPoint);
 
         }
     }
@@ -388,7 +489,7 @@ public class ConnectionManager : MonoBehaviour
         using (BinaryReader reader = new BinaryReader(_stream))
         {
             int playerCount = reader.ReadInt32();
-            for(int i = 0; i > playerCount; i++)
+            for (int i = 0; i > playerCount; i++)
             {
                 ClientHandle client = new ClientHandle();
                 client.id = reader.ReadInt32();
@@ -400,6 +501,7 @@ public class ConnectionManager : MonoBehaviour
     private void ParseDisconnect(Packet packet)
     {
         Debug.Log("Disconnected by server!");
+        //TODO: display Disconnected by server in game
         connected = false;
     }
     private void ParseACK(Packet packet)
@@ -428,25 +530,55 @@ public class ConnectionManager : MonoBehaviour
     #endregion
 
     #region Json data
+    private void ParseWorldStateData(Packet packet)
+    {
+
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            WorldState wS = packet.GetJson<WorldState>();
+            if (wS == null)
+                return;
+
+            UpdateWorldState(wS);
+
+        });
+    }
+    private void ParseItemPosition(Packet packet)
+    {
+
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            ItemPosData itemPosData = packet.GetJson<ItemPosData>();
+            if (itemPosData == null)
+                return;
+
+            UpdateItemPos(itemPosData);
+
+        });
+    }
+
+    
+
     private void ParseLobbyInfo(Packet packet)
     {
         Debug.Log("Got lobby info");
         ThreadManager.ExecuteOnMainThread(() =>
-        {
-            LobbyInfo mapInfo = packet.GetJson<LobbyInfo>();
-            if (mapInfo == null)
+        { 
+            LobbyInfo lobbyInfo = packet.GetJson<LobbyInfo>();
+            client_self.lobbyInfo = lobbyInfo;
+            if (lobbyInfo == null)
                 return;
-            if (FindObjectOfType<MapLoader>().lobbyLoading) //I HATE MYSELF
+            if (FindObjectOfType<MapLoader>().lobbyLoading) //I HATE MYSELF (jk)
                 return;                                     //TODO: do something with this shitty ass hack
 
             if (FindObjectOfType<MapLoader>().CurrentMapManager == null)
             {
-                FindObjectOfType<MapLoader>().LoadMap(mapInfo);
+                FindObjectOfType<MapLoader>().LoadMap(lobbyInfo);
             }
             else
-                FindObjectOfType<MapLoader>().UpdateMap(mapInfo);
+                FindObjectOfType<MapLoader>().UpdateMap(lobbyInfo);
 
-            players = mapInfo.players;
+            players = lobbyInfo.players;
         });
 
 
@@ -454,28 +586,25 @@ public class ConnectionManager : MonoBehaviour
 
     private void ParseTransformData(Packet packet)
     {
-     
+
         ThreadManager.ExecuteOnMainThread(() =>
-        { 
+        {
 
             PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
             foreach (PlayerData player in json_.players) // for each player in recieved json
             {
                 if (player.id == client_self.id)
                     continue;
-                
+
                 ClientHandle matchingPlayer = clients.FirstOrDefault(x => x.id == player.id); //find the connected local player by id
 
                 if (matchingPlayer != null)
                 {
                     ThreadManager.ExecuteOnMainThread(() => //apply all the positions
                     {
-                        matchingPlayer.connectedPlayer.real_velocity = player.transforms.real_velocity;
-                        matchingPlayer.connectedPlayer.target_velocity = player.transforms.target_velocity;
-                        matchingPlayer.connectedPlayer.position = player.transforms.position;
-                        matchingPlayer.connectedPlayer.rotation = player.transforms.rotation;
+                        matchingPlayer.connectedPlayer.transforms = player.transforms;
                         matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
-                        matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f; //TODO: make so the movement script handles movement. Split the movement script into local side and a remote side.
+                        matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f;
                     });
                 }
 
