@@ -19650,7 +19650,7 @@ PrefabInstance:
     - target: {fileID: 1225565561291429704, guid: 0827672cb57f05940856b9dad1546850,
         type: 3}
       propertyPath: m_Range
-      value: 33.61019
+      value: 236
       objectReference: {fileID: 0}
     - target: {fileID: 1225565561291429704, guid: 0827672cb57f05940856b9dad1546850,
         type: 3}
@@ -19685,12 +19685,12 @@ PrefabInstance:
     - target: {fileID: 2330696240371094665, guid: 0827672cb57f05940856b9dad1546850,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.1675615
+      value: 2.81
       objectReference: {fileID: 0}
     - target: {fileID: 2330696240371094665, guid: 0827672cb57f05940856b9dad1546850,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -4.3658442
+      value: 5.44
       objectReference: {fileID: 0}
     - target: {fileID: 2330696240371094665, guid: 0827672cb57f05940856b9dad1546850,
         type: 3}
@@ -19764,6 +19764,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3878622474782124370, guid: 0827672cb57f05940856b9dad1546850,
         type: 3}
+      propertyPath: m_VolumetricDimmer
+      value: 1.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3878622474782124370, guid: 0827672cb57f05940856b9dad1546850,
+        type: 3}
       propertyPath: m_VolumetricShadowDimmer
       value: 1
       objectReference: {fileID: 0}
@@ -19776,6 +19781,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8208098204574811497, guid: 0827672cb57f05940856b9dad1546850,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

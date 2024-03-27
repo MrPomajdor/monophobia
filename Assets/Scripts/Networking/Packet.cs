@@ -60,6 +60,7 @@ public static class Flags
         public static byte[] lobbyInfo = new byte[] { 0x09 };
         public static byte[] worldState = new byte[] { 0xC2 };
         public static byte[] itemData = new byte[] { 0xC3 };
+        public static byte[] playerData = new byte[] { 0xC4 }; //warning: contents explosive
         public static byte[] voice = new byte[] { 0x0C };
 
     }

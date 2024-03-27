@@ -52,8 +52,8 @@ public class UDPHandler : MonoBehaviour
 
     }
 
-    //TODO: 25.01.2024 Send Transform packets when moving (DONE),Recieve transform packets (in progress), make a handler for udp packets, and shit like that
-    //im going to bed now its fucking 3 am and im not going to school because i want to do this nonesense.
+
+    //25.01.2024 im going to bed now its fucking 3 am and im not going to school because i want to do this nonesense.
     //Bye future me please dont be mad :c
     //26.01.2024 i was mad for the first 5 seconds xd
     //27.01.2024 WHY THE FUCK THE CONNECTION IS CLOSING WHEN MORE THAN 1 PLAYERS JOIN FOR FUCKS SAKE
@@ -79,7 +79,7 @@ public class UDPHandler : MonoBehaviour
             }
             catch(SocketException)
             {
-                //okay
+                //nop
             }
             catch (Exception e){
                 Debug.LogError($"UDP Recieve error: {e}");

@@ -18,6 +18,9 @@ public class SpeakIndicator : MonoBehaviour
         color = material.color;
         player = transform.root.GetComponent<Player>();
         conMan = FindAnyObjectByType<ConnectionManager>();
+        if (player.playerInfo.isLocal)
+            gameObject.SetActive(false);
+            
     }
 
     // Update is called once per frame

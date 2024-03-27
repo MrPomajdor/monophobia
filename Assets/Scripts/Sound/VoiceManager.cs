@@ -4,6 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using POpusCodec.Enums;
+using Steamworks;
+using System.Linq;
 public class VoiceManager : MonoBehaviour
 {
     public AudioSource mainAudioSource;
@@ -13,6 +15,7 @@ public class VoiceManager : MonoBehaviour
 
     public List<byte[]> PacketsReady { get; set; } = new List<byte[]>();
     public List<byte[]> InputPackets { get; set; } = new List<byte[]>();
+    public List<AudioClip> VoicePieces { get; private set; } = new List<AudioClip>();
 
     public SamplingRate samplerate = SamplingRate.Sampling48000;
     public SamplingRate samplerateMic = SamplingRate.Sampling48000;
@@ -33,6 +36,25 @@ public class VoiceManager : MonoBehaviour
 
     public bool MuteSelf { get; set; }
     public float Sensitivity=5;
+
+    static float[] CombineFloatArrays(List<float[]> floatArrays)
+    {
+        // Calculate total length of the combined array
+        int totalLength = floatArrays.Sum(arr => arr.Length);
+
+        // Initialize a new array with the calculated length
+        float[] combinedArray = new float[totalLength];
+
+        // Copy elements from each array to the combined array
+        int currentIndex = 0;
+        foreach (var arr in floatArrays)
+        {
+            Array.Copy(arr, 0, combinedArray, currentIndex, arr.Length);
+            currentIndex += arr.Length;
+        }
+
+        return combinedArray;
+    }
     public static float CalculateAverageVolume(float[] pcmData)
     {
         if (pcmData == null || pcmData.Length == 0 || pcmData.Length % 2 != 0)
@@ -50,7 +72,7 @@ public class VoiceManager : MonoBehaviour
             sum += Math.Abs(sample);
         }
 
-        // Calculate the average volume
+
         return (sum / sampleCount) * 1000;
     }
 
@@ -72,7 +94,7 @@ public class VoiceManager : MonoBehaviour
 
         //ENCODING INIT
         decoder = new OpusDecoder(samplerate, opusChannels);
-        encoder = new OpusEncoder(samplerate, opusChannels, (int)samplerate * 2, POpusCodec.Enums.OpusApplicationType.Voip);
+        encoder = new OpusEncoder(samplerate, opusChannels, (int)samplerate * 2, POpusCodec.Enums.OpusApplicationType.Voip); //TODO : Do not create a decoder if not needed! (pls do this)
         encoder.EncoderDelay = delay;
         frameSize = encoder.FrameSizePerChannel * (int)opusChannels;
 
@@ -88,12 +110,9 @@ public class VoiceManager : MonoBehaviour
     }
     private void OnAudioPlaybackRead(float[] data)
     {
-        //if (receiveBuffer.Count < frameSize) bro frame size is for opus
-        //    return;
-
-
+        //nop
     }
-
+    List<float[]> tempSamples = new List<float[]>();
     void OnAudioFilterRead(float[] data, int channels)
     {
         if (!MuteSelf && isLocal)
@@ -121,6 +140,22 @@ public class VoiceManager : MonoBehaviour
             dataBuf.CopyTo(data, 0);
             receiveBuffer.RemoveRange(0, pullSize);
 
+            //this code here \/ (below) (down here) (-up) captures some of the audio for the mimic to play later
+
+            if (CalculateAverageVolume(dataBuf) > 15)//TODO: IMPORTANT! Make a algorithm that calculates the threshold volume, or set a static (prob. the algorithm)
+            {  
+                tempSamples.Add(dataBuf);
+                if (tempSamples.Count > (pull / pullCount) / (int)samplerate * 2) // average pull byte count divided by sample rate to get the +/- seconds
+                {
+                    if(VoicePieces.Count > 5)
+                        VoicePieces.RemoveAt(0);
+                    AudioClip newA = AudioClip.Create("vo", (int)samplerate * 2, (int)channels, (int)samplerate, false);
+                    newA.SetData(CombineFloatArrays(tempSamples), 0);
+                    VoicePieces.Add(newA);
+                    tempSamples.Clear();
+                    
+                }
+            }
             // clear rest of data
             for (int i = pullSize; i < data.Length; i++)
             {
@@ -133,6 +168,7 @@ public class VoiceManager : MonoBehaviour
     void Update()
     {
         if (pullCount > 0) //remove the delay (audio that wont get played anyway)
+                           //delay meaning the audio data in front of the array that wont get played;
         {
             int averageLen = (pull / pullCount);
             if (receiveBuffer.Count / averageLen > 2)

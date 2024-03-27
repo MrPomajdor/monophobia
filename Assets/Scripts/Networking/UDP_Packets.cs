@@ -23,6 +23,16 @@ public class Inputs
     public bool isCrouching;
 
 }
+
+[Serializable]
+public class SerializableStats
+{
+    public float alcohol;
+    public float sanity;
+    //more should be in the future
+    //like eg. no idea what
+
+}
 [Serializable]
 public class PlayerData 
 {
@@ -30,7 +40,7 @@ public class PlayerData
     public Transforms transforms;
     public Inputs Inputs;
     public int id=-1;
-
+    public SerializableStats stats;
 }
 
 

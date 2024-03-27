@@ -9,15 +9,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
-using static UnityEditor.FilePathAttribute;
-using UnityEngine.UIElements;
 
 public static class Tools
 {
-    public static void UpdatePos(Transform transform,Rigidbody rb, Transforms transforms,bool player=false)
+    public static void UpdatePos(Transform transform, Rigidbody rb, Transforms transforms, bool player = false)
     {
-        if(!player) transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z); 
-        else        transform.rotation = Quaternion.Euler(0, transforms.rotation.y, 0);
+        if (!player) transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z);
+        else transform.rotation = Quaternion.Euler(0, transforms.rotation.y, 0);
         rb.velocity = transforms.real_velocity;
         rb.velocity += transforms.position - transform.position;
         rb.velocity += transforms.target_velocity;
@@ -70,16 +68,16 @@ public class ConnectionManager : MonoBehaviour
         ItemStruct[] itemsToRemove = worldState.Items.Except(newWorldState.Items).ToArray();
         ItemStruct[] newItems = newWorldState.Items.Except(worldState.Items).ToArray();
         Item[] itemLoaded = FindObjectsByType<Item>(FindObjectsSortMode.None);
-        if (itemsToRemove.Length>0)
-            foreach(ItemStruct item in itemsToRemove)
+        if (itemsToRemove.Length > 0)
+            foreach (ItemStruct item in itemsToRemove)
             {
-                Item x = itemLoaded.FirstOrDefault(x  => x.item.id == item.id);
-                if(x != null)
+                Item x = itemLoaded.FirstOrDefault(x => x.item.id == item.id);
+                if (x != null)
                     Destroy(x.gameObject);
             }
-        
-        if(newItems.Length>0)
-            foreach(ItemStruct item in newItems)
+
+        if (newItems.Length > 0)
+            foreach (ItemStruct item in newItems)
             {
                 GameObject itemObject = Instantiate(Resources.Load<GameObject>(item.name));
 
@@ -211,6 +209,7 @@ public class ConnectionManager : MonoBehaviour
         catch (IOException)
         {
             Debug.Log($"Disconnected by the server");
+            //TODO: Return to main menu if disconnected
             Disconnect();
         }
         catch (Exception e)
@@ -264,7 +263,7 @@ public class ConnectionManager : MonoBehaviour
         parser.DigestMessage(_data);
     }
 
-    
+
     private void ParseData(Packet packet)
     {
         //try
@@ -290,7 +289,7 @@ public class ConnectionManager : MonoBehaviour
             case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
                 ParseLobbyInfo(packet);
                 break;
-            case var _ when packet.flag[0] == Flags.Response.transformData[0]:
+            case var _ when packet.flag[0] == Flags.Response.transformData[0]: //That also syncs up the stats
                 ParseTransformData(packet);
                 break;
             case var _ when packet.flag[0] == Flags.Response.worldState[0]:
@@ -557,13 +556,13 @@ public class ConnectionManager : MonoBehaviour
         });
     }
 
-    
+
 
     private void ParseLobbyInfo(Packet packet)
     {
         Debug.Log("Got lobby info");
         ThreadManager.ExecuteOnMainThread(() =>
-        { 
+        {
             LobbyInfo lobbyInfo = packet.GetJson<LobbyInfo>();
             client_self.lobbyInfo = lobbyInfo;
             if (lobbyInfo == null)
@@ -584,7 +583,7 @@ public class ConnectionManager : MonoBehaviour
 
     }
 
-    private void ParseTransformData(Packet packet)
+    private void ParseTransformData(Packet packet) //TODO: ParseTransformData also syncs up the stats (should break it up in the future)
     {
 
         ThreadManager.ExecuteOnMainThread(() =>
@@ -600,16 +599,19 @@ public class ConnectionManager : MonoBehaviour
 
                 if (matchingPlayer != null)
                 {
-                    ThreadManager.ExecuteOnMainThread(() => //apply all the positions
-                    {
-                        matchingPlayer.connectedPlayer.transforms = player.transforms;
-                        matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
-                        matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f;
-                    });
+                    //apply everything
+
+                    matchingPlayer.connectedPlayer.transforms = player.transforms;
+                    matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
+                    matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f;
+                    matchingPlayer.connectedPlayer.stats.sanity = player.stats.sanity;
+                    matchingPlayer.connectedPlayer.stats.alcohol = player.stats.alcohol;
+
                 }
 
             }
         });
+
     }
     #endregion
 

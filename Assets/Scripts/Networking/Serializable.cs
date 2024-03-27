@@ -41,6 +41,14 @@ public class ItemStruct
 }
 
 [Serializable]
+public class Tooltip
+{
+    public string title;
+    public string description;
+    public string use;
+}
+
+[Serializable]
 public class LobbyInfo
 {
     //TODO: Add more map class settings if needed
