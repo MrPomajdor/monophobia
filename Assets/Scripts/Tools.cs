@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
+using UnityEditor;
 using UnityEngine;
 
 namespace Toolz
@@ -30,6 +31,23 @@ namespace Toolz
             }
             sb.Append("}");
             Debug.Log(sb.ToString());
+        }
+        public static bool ApplicationIsAboutToExitPlayMode()
+        {
+#if UNITY_EDITOR
+            return EditorApplication.isPlayingOrWillChangePlaymode && Application.isPlaying;
+#else
+            return false;
+#endif
+        }
+
+        public static bool ApplicationIsAboutToEnterPlayMode()
+        {
+#if UNITY_EDITOR
+            return EditorApplication.isPlayingOrWillChangePlaymode && !Application.isPlaying;
+#else
+        return false;
+#endif
         }
     }
 }

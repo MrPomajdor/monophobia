@@ -8,6 +8,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using UnityEditor;
+using UnityEditor.Playables;
 using UnityEngine;
 
 public static class Tools
@@ -54,10 +56,17 @@ public class ConnectionManager : MonoBehaviour
     private MenuManager menuManager;
     public bool IsSelfHost { get { return this.client_self.connectedPlayer.playerInfo.isHost; } }
 
+
+
     private void OnDisable()
     {
+        if (Toolz.Tools.ApplicationIsAboutToExitPlayMode() == false)
+        {
+            udp_handler.Dispose();
+        }
         Disconnect();
         worldState.Items.Clear();
+
     }
 
     private void UpdateWorldState(WorldState newWorldState)
@@ -132,15 +141,28 @@ public class ConnectionManager : MonoBehaviour
         Debug.Log("Connecting...");
         socket.BeginConnect(ip, port, ConnectCallback, socket);
     }
+    //29.03.2024 brecause I forgot to dispose and stop everything related to networking I lost my mind.
+    //I almost fucking exploded trying to find why when I enter play mode couple of times my cpu starts to fucking burn extra calories
+    //(udp handler was creating a THREAD with a WHILE (TRUE) loop that I didn't stop anywhere ;-;)
+    //note to self: don't code like an 8th grader you piece of dogshit.
     private void Disconnect()
     {
-        if (socket.Connected)
+        if (socket!=null && socket.Connected)
         {
             connected = false;
             socket.Close();
             socket.Dispose();
-            Debug.Log("Disconnected");
         }
+
+        if (stream != null)
+        {
+            stream.Close();
+            stream.Dispose();
+        }
+
+        udp_handler.Dispose();
+        Debug.Log("Disconnected");
+        
 
     }
     private void CheckStatus()

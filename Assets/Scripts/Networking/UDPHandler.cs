@@ -19,7 +19,7 @@ public class UDPHandler : MonoBehaviour
     public string lastReceivedUDPPacket = "";
     public string allReceivedUDPPackets = "";
 
-
+    private bool closing = false;
     void SendHolePunchingPacket()
     {
         byte[] data = System.Text.Encoding.UTF8.GetBytes("holepunch");
@@ -68,6 +68,8 @@ public class UDPHandler : MonoBehaviour
         Debug.Log("UDP Recieving thread started!");
         while (true)
         {
+            if (closing)
+                break;
             if (client.Available < 1)
                 continue;
 
@@ -84,7 +86,9 @@ public class UDPHandler : MonoBehaviour
             catch (Exception e){
                 Debug.LogError($"UDP Recieve error: {e}");
             }
+
         }
+        Debug.Log("UDP Recieving thread stopped smoothly!");
     }
     
 
@@ -125,5 +129,13 @@ public class UDPHandler : MonoBehaviour
     {
         allReceivedUDPPackets = "";
         return lastReceivedUDPPacket;
+    }
+    public void Dispose()
+    {
+        Debug.Log("Disposing UDP Thread and connection...");
+        closing = true;
+        client.Close();
+        client.Dispose();
+        
     }
 }
