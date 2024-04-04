@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,12 +14,13 @@ public class Item : MonoBehaviour
     public ItemStruct item;
     public Tooltip tooltip;
     public bool pickedUp = false;
-    public Rigidbody rb {  get; private set; }
-    public Transforms transforms { get; set; } 
+    public Rigidbody rb { get; private set; }
+    public Transforms transforms { get; set; }
+    private float lastNetworkTime;
     void Start()
     {
         conMan = FindAnyObjectByType<ConnectionManager>();
-        rb = GetComponent<Rigidbody>(); 
+        rb = GetComponent<Rigidbody>();
         if (conMan == null)
             return;
         if (conMan.IsSelfHost)
@@ -38,18 +38,26 @@ public class Item : MonoBehaviour
 
     void Update()
     {
-        if (conMan.IsSelfHost || pickedUp)
+        lastNetworkTime += Time.deltaTime;
+
+
+
+        if (conMan.IsSelfHost || pickedUp && lastNetworkTime > 0.2f)
         {
+            lastNetworkTime = 0;
+            if (transforms == null)
+                transforms = new Transforms();
             transforms.position = transform.position;
             transforms.rotation = transform.eulerAngles;
             transforms.real_velocity = rb.velocity;
-            if(!pickedUp) transforms.target_velocity = rb.velocity; //TODO: When picking up an item replace this externally
+            if (!pickedUp) transforms.target_velocity = rb.velocity; //TODO: When picking up an item replace this externally
             conMan.SendItemLocationInfo(this);
         }
         else
         {
             Tools.UpdatePos(transform, rb, transforms);
         }
+
     }
 
 }

@@ -42,7 +42,7 @@ public class UDPHandler : MonoBehaviour
         receiveThread.IsBackground = true;
         receiveThread.Start();
 
-        InvokeRepeating("SendHolePunchingPacket", 0.5f, 0.5f);
+        InvokeRepeating("SendHolePunchingPacket", 0.5f, 10f);
 
     }
 

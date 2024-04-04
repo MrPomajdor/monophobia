@@ -93,6 +93,7 @@ public class MapLoader : MonoBehaviour
             }
             //TODO: make soimething to save settings and ever choose them.
             //Here we should use the CreatePlayer function but IT WONT FUCKING WORK AND IM SICK OF IT
+            //i should really use one function for this
             PlayerSpawnPosition[] spawns = FindObjectsOfType<PlayerSpawnPosition>();
             if (spawns.Length == 0)
             {
@@ -106,8 +107,11 @@ public class MapLoader : MonoBehaviour
             lcp.playerInfo.id = conMan.client_self.id;
             lcp.playerInfo.name = conMan.client_self.name;
             lcp.playerInfo.isHost = isSelfHost;
+            if (conMan.client_self == null)
+                conMan.client_self = new ClientHandle();
             conMan.client_self.connectedPlayer = lcp;
             lcp.voice.isLocal = true;
+            lcp.voice.Init();
  
 
 
@@ -154,6 +158,7 @@ public class MapLoader : MonoBehaviour
         npl.playerInfo.id = self ? conMan.client_self.id : npl.playerInfo.id;
         npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
         npl.voice.isLocal = self;
+        npl.voice.Init();
         npl.cam.GetComponent<AudioListener>().enabled = false;
         ClientHandle binpl = new ClientHandle();
         binpl.id = self ? conMan.client_self.id : npl.playerInfo.id;

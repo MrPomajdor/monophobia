@@ -13,6 +13,9 @@ public class PlayerInfo
     public string skin;
     public bool isHost;
     public bool isLocal;
+    //TODO: public int health;
+    //TODO: public int sanity;
+
 }
 [Serializable]
 public class MiscSettings

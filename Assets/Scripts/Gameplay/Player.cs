@@ -1,22 +1,27 @@
-
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 [RequireComponent(typeof(Stats))]
 [RequireComponent(typeof(SoundEffectsManager))]
 public class Player : MonoBehaviour
 {
     public PlayerInfo playerInfo;
+    [field: SerializeField]
     public Camera cam { get; private set; }
     public MouseRotation mouseRotation;
     public Movement movement;
     ConnectionManager conMan;
+    [field: SerializeField]
     public Rigidbody rb { get; private set; }
+    [field: SerializeField]
     public Transforms transforms;
     public float lastTime;
+
+    [field: SerializeField]
     public VoiceManager voice { get; private set; }
     public Stats stats { get; private set; }
     private SoundEffectsManager sfxManager;
+    [SerializeField]
+    private bool m_debug = false;
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -32,37 +37,38 @@ public class Player : MonoBehaviour
     private void OnGUI()
     {
         if (!playerInfo.isLocal) return;
+        if (!m_debug) return;
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000),$"Local Player ID: {playerInfo.id}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nRECV VOL: {voice.lastRecievedVolume}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nRECV VOL: {voice.lastRecievedVolume}", style);
     }
     void Update()
     {
         
-
+        //TODO: (and the one more) transforms.target_velocity = 
         lt2 += Time.deltaTime;
         lt3 += Time.deltaTime;
         if (!playerInfo.isLocal)
         {  //-----------------------------------------REMOTE CODE------------------------------------------------
-            Tools.UpdatePos(transform, rb, transforms,true); 
+            Tools.UpdatePos(transform, rb, transforms, true);
         }
         else
         {  //-----------------------------------------LOCAL CODE-------------------------------------------------
-
+            transforms.position = transform.position;
+            transforms.real_velocity = rb.velocity;
             //voice
-            if (playerInfo.isLocal)
+
+            if (voice.PacketsReady.Count > 0)
             {
-                if (voice.PacketsReady.Count>0)
-                {
-                    //Debug.Log("Voice data avaliable!");
-                    conMan.SendVoiceData(voice.GetPacket());
-                }
-                else
-                {
-                   // Debug.Log("no voice data");
-                }
+                Debug.Log("Voice data avaliable!");
+                conMan.SendVoiceData(voice.GetPacket());
             }
+            else
+            {
+                // Debug.Log("no voice data");
+            }
+
 
             //periodic position sending
             if (lt2 > 0.15f)
@@ -70,22 +76,22 @@ public class Player : MonoBehaviour
                 conMan.SendPlayerLocationInfo(this);
                 lt2 = 0;
             }
-            
+
 
             //TEMP CODE ONLY FOR TESTING REMOVE IT LATER
-            if(lt3 > 5)
+            if (lt3 > 5)
             {
                 if (conMan.clients.Count == 0)
                     return;
-                if(conMan.clients[0].connectedPlayer.voice.VoicePieces.Count > 0) //ugly \/
-                    sfxManager.PlaySound(conMan.clients[0].connectedPlayer.voice.VoicePieces[UnityEngine.Random.Range(0, conMan.clients[0].connectedPlayer.voice.VoicePieces.Count-1)]);
+                if (conMan.clients[0].connectedPlayer.voice.VoicePieces.Count > 0) //ugly \/
+                    sfxManager.PlaySound(conMan.clients[0].connectedPlayer.voice.VoicePieces[UnityEngine.Random.Range(0, conMan.clients[0].connectedPlayer.voice.VoicePieces.Count - 1)]);
                 lt3 = 0;
             }
 
         }
     }
 
-    
+
 
 
 }

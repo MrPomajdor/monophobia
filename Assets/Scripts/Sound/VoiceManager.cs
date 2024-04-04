@@ -36,7 +36,8 @@ public class VoiceManager : MonoBehaviour
 
     public bool MuteSelf { get; set; }
     public float Sensitivity=5;
-
+    private bool initialized = false;
+    private bool isFocused = false;
     static float[] CombineFloatArrays(List<float[]> floatArrays)
     {
         // Calculate total length of the combined array
@@ -79,6 +80,12 @@ public class VoiceManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        
+    }
+    public void Init()
+    {
+        string x = isLocal ? "Local" : "Remote";
+        Debug.Log($"{x} voice inializing....");
         //AUDIO INIT
         mainAudioSource = gameObject.GetComponent<AudioSource>();
         if (isLocal)
@@ -86,7 +93,7 @@ public class VoiceManager : MonoBehaviour
             mainAudioSource.clip = Microphone.Start(null, true, 1, (int)samplerateMic);
             while (!(Microphone.GetPosition(null) > 0)) { /*nop*/ }
         }
-        else 
+        else
             mainAudioSource.clip = AudioClip.Create("recv", (int)samplerate * 2, (int)clipChannels, (int)samplerate, true, OnAudioPlaybackRead);
         mainAudioSource.loop = true;
         mainAudioSource.Play();
@@ -100,8 +107,10 @@ public class VoiceManager : MonoBehaviour
 
         print($"opus freq: {(int)encoder._inputSamplingRate}");
         micBuffer.Clear();
+        initialized = true;
+        
+        Debug.Log($"{x} voice inialized!");
     }
-
     private void OnDisable()
     {
         decoder.Dispose();
@@ -115,12 +124,22 @@ public class VoiceManager : MonoBehaviour
     List<float[]> tempSamples = new List<float[]>();
     void OnAudioFilterRead(float[] data, int channels)
     {
-        if (!MuteSelf && isLocal)
+        
+        if (!MuteSelf && isLocal && initialized && isFocused) //xd
         {
-            // add mic data to buffer
+           
             lastMicVolume = CalculateAverageVolume(data);
-            if(lastMicVolume > Sensitivity)
+            if (lastMicVolume > Sensitivity)
+            {
+                // add mic data to buffer
                 micBuffer.AddRange(data);
+
+                if (micBuffer.Count > 5000) //why does this happend?
+                {
+                    micBuffer.RemoveAt(0);
+                    Debug.LogWarning("Mic buffer too large - stripping.");
+                }
+            }
             
         }
 
@@ -129,6 +148,7 @@ public class VoiceManager : MonoBehaviour
         {
             data[i] = 0;
         }
+        if (!initialized) return;
 
         if (!isLocal)
         {
@@ -140,22 +160,7 @@ public class VoiceManager : MonoBehaviour
             dataBuf.CopyTo(data, 0);
             receiveBuffer.RemoveRange(0, pullSize);
 
-            //this code here \/ (below) (down here) (-up) captures some of the audio for the mimic to play later
-
-            if (CalculateAverageVolume(dataBuf) > 15)//TODO: IMPORTANT! Make a algorithm that calculates the threshold volume, or set a static (prob. the algorithm)
-            {  
-                tempSamples.Add(dataBuf);
-                if (tempSamples.Count > (pull / pullCount) / (int)samplerate * 2) // average pull byte count divided by sample rate to get the +/- seconds
-                {
-                    if(VoicePieces.Count > 5)
-                        VoicePieces.RemoveAt(0);
-                    AudioClip newA = AudioClip.Create("vo", (int)samplerate * 2, (int)channels, (int)samplerate, false);
-                    newA.SetData(CombineFloatArrays(tempSamples), 0);
-                    VoicePieces.Add(newA);
-                    tempSamples.Clear();
-                    
-                }
-            }
+            
             // clear rest of data
             for (int i = pullSize; i < data.Length; i++)
             {
@@ -167,6 +172,36 @@ public class VoiceManager : MonoBehaviour
 
     void Update()
     {
+        //TODO: Make this \/
+        /*
+          //this code here \/ (below) (down here) (-up) captures some of the audio for the mimic to play later
+
+            if (CalculateAverageVolume(dataBuf) > 15)//TODO: IMPORTANT! Make a algorithm that calculates the threshold volume, or set a static (prob. the algorithm)
+            {  
+                tempSamples.Add(dataBuf);
+                if (tempSamples.Count > (pull / pullCount) / (int)samplerate * 2) // average pull byte count divided by sample rate to get the +/- seconds
+                {
+                    ThreadManager.ExecuteOnMainThread(() =>
+                    {
+                        try
+                        {
+                            if (VoicePieces.Count > 5)
+                                VoicePieces.RemoveAt(0);
+                            AudioClip newA = AudioClip.Create("vo", (int)samplerate * 2, (int)channels, (int)samplerate, false);
+                            newA.SetData(CombineFloatArrays(tempSamples), 0);
+                            VoicePieces.Add(newA);
+                            tempSamples.Clear();
+                        }
+                        catch { //TODO: do it propeltysdfsdfsd
+                                //nop
+                              }
+                    });
+                }
+            }
+         */
+
+        isFocused = Application.isFocused;
+        if (!initialized) return;
         if (pullCount > 0) //remove the delay (audio that wont get played anyway)
                            //delay meaning the audio data in front of the array that wont get played;
         {

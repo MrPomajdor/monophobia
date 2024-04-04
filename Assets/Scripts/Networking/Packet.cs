@@ -241,7 +241,7 @@ public class Packet
 public class PacketParser
 {
     private Dictionary<byte[], Action<Packet>> headerProcessors = new Dictionary<byte[], Action<Packet>>(new ByteArrayComparer());
-    private Dictionary<byte[], Action<Packet>> UDPheaderProcessors = new Dictionary<byte[], Action<Packet>>(new ByteArrayComparer());
+    //private Dictionary<byte[], Action<Packet>> UDPheaderProcessors = new Dictionary<byte[], Action<Packet>>(new ByteArrayComparer());
 
     public static byte[] AssembleMessage(byte[] header, byte[] flag, byte[] payload)
     {
@@ -274,7 +274,7 @@ public class PacketParser
                 processor.Invoke(packet);
             }catch(Exception e)
             {
-                Debug.LogError($"Failed to run function for header {headerBytes[0]} {headerBytes[1]}. {e.Message}");
+                Debug.LogError($"Failed to run function for header {headerBytes[0]} {headerBytes[1]} - flag {receivedMessage[2]}. {e.Message}");
             }
         }
         else

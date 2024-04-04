@@ -9,8 +9,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEditor;
-using UnityEditor.Playables;
 using UnityEngine;
+using static UnityEngine.Rendering.DebugUI;
 
 public static class Tools
 {
@@ -48,13 +48,18 @@ public class ConnectionManager : MonoBehaviour
     public ClientHandle client_self = new ClientHandle();
     [SerializeField]
     public List<ClientHandle> clients = new List<ClientHandle>();
-    private UI_LobbyManager lobbyManager;
+    public UI_LobbyManager lobbyManager;
     private PlayerInfo[] players;
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;
     private UDPHandler udp_handler;
     private MenuManager menuManager;
-    public bool IsSelfHost { get { return this.client_self.connectedPlayer.playerInfo.isHost; } }
+    public bool IsSelfHost { get { 
+            if (client_self != null && this.client_self.connectedPlayer != null)
+                return this.client_self.connectedPlayer.playerInfo.isHost; 
+            else return false;
+        } 
+    } 
 
 
 
@@ -186,7 +191,7 @@ public class ConnectionManager : MonoBehaviour
         if (!socket.Connected)
         {
             Debug.Log("Could not connect!");
-
+            //TODO: Try to connect again.
             return;
         }
         Debug.Log("Connected!");
@@ -231,6 +236,7 @@ public class ConnectionManager : MonoBehaviour
         catch (IOException)
         {
             Debug.Log($"Disconnected by the server");
+            FindObjectOfType<MapLoader>().ReturnToMenu();
             //TODO: Return to main menu if disconnected
             Disconnect();
         }
@@ -258,10 +264,11 @@ public class ConnectionManager : MonoBehaviour
         else
         {
             Debug.LogError("Steam not initialized!");
+            //TODO: show message box informing that "Steam is not launched. Please open steam and run the game again.", and when the user clicks "OK" the game closes.
         }
         DontDestroyOnLoad(gameObject);
         menuManager = FindAnyObjectByType<MenuManager>();
-        lobbyManager = FindObjectOfType<UI_LobbyManager>();
+        //lobbyManager = FindAnyObjectByType<UI_LobbyManager>();
 
         parser = new PacketParser();
 
@@ -607,16 +614,18 @@ public class ConnectionManager : MonoBehaviour
 
     private void ParseTransformData(Packet packet) //TODO: ParseTransformData also syncs up the stats (should break it up in the future)
     {
+        Debug.Log("Got transform data.");
 
         ThreadManager.ExecuteOnMainThread(() =>
         {
-
+            
             PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
             foreach (PlayerData player in json_.players) // for each player in recieved json
             {
+
                 if (player.id == client_self.id)
                     continue;
-
+                Debug.Log($"Got transform data for {player.id}");
                 ClientHandle matchingPlayer = clients.FirstOrDefault(x => x.id == player.id); //find the connected local player by id
 
                 if (matchingPlayer != null)
@@ -628,6 +637,7 @@ public class ConnectionManager : MonoBehaviour
                     matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f;
                     matchingPlayer.connectedPlayer.stats.sanity = player.stats.sanity;
                     matchingPlayer.connectedPlayer.stats.alcohol = player.stats.alcohol;
+
 
                 }
 

@@ -8,6 +8,7 @@ public class ClientHandle
 {
     public int id=-1;
     public int health=100;
+    public int sanity=100;
     public string name;
     public Player connectedPlayer;
     public LobbyInfo lobbyInfo;

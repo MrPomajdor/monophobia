@@ -192,7 +192,7 @@ public class SteamManager : MonoBehaviour
         }
 
         // Run Steam client callbacks
-        SteamAPI.RunCallbacks();
+        //SteamAPI.RunCallbacks();
     }
 #else
 	public static bool Initialized {

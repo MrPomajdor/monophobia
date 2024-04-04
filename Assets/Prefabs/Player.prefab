@@ -631,6 +631,7 @@ MonoBehaviour:
   m_maxRaycastDistance: 10
   m_translateStrength: 13
   holdPoint: {fileID: 3338296100986779347}
+  lerpSpeed: 1
 --- !u!1 &7127683235744842812
 GameObject:
   m_ObjectHideFlags: 0
@@ -694,14 +695,18 @@ MonoBehaviour:
     skin: 
     isHost: 0
     isLocal: 0
+  <cam>k__BackingField: {fileID: 7127683235722503675}
   mouseRotation: {fileID: 7127683235722503676}
   movement: {fileID: 7127683235744842814}
+  <rb>k__BackingField: {fileID: 7127683235744842813}
   transforms:
     position: {x: 0, y: 0, z: 0}
     rotation: {x: 0, y: 0, z: 0}
     target_velocity: {x: 0, y: 0, z: 0}
     real_velocity: {x: 0, y: 0, z: 0}
   lastTime: 0
+  <voice>k__BackingField: {fileID: 7626471895663694973}
+  m_debug: 1
 --- !u!114 &7127683235744842814
 MonoBehaviour:
   m_ObjectHideFlags: 0
