@@ -8,33 +8,38 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using UnityEditor;
 using UnityEngine;
-using static UnityEngine.Rendering.DebugUI;
 
 public static class Tools
 {
-    public static void UpdatePos(Transform transform, Rigidbody rb, Transforms transforms, bool player = false)
+    public static void UpdatePos(Transform transform, Rigidbody rb, Transforms transforms, Player player = null, Inputs inputs = null, float smoothingFactor = 0.5f)
     {
-        if (!player) transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z);
-        else transform.rotation = Quaternion.Euler(0, transforms.rotation.y, 0);
         rb.velocity = transforms.real_velocity;
         rb.velocity += transforms.position - transform.position;
-        rb.velocity += transforms.target_velocity;
+        
         if (Vector3.Distance(transform.position, transforms.position) > 2)
             transform.position = transforms.position;
+        if (!player)
+            transform.rotation = Quaternion.Slerp(transform.rotation,Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z),smoothingFactor*Time.deltaTime);
+        else
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, transforms.rotation.y, 0),smoothingFactor*Time.deltaTime);
+            player.cam.transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, 0); //TODO: Smooth
+            rb.AddForce(inputs.MoveDirection*500 * Time.deltaTime,ForceMode.Force);
+        }
+       
     }
 }
 [Serializable]
 public class WorldState
 {
-    public List<ItemStruct> Items = new List<ItemStruct>();
+    public List<ItemStruct> items = new List<ItemStruct>();
     //TODO: Add mobs
 }
 public class ConnectionManager : MonoBehaviour
 {
 
-    private WorldState worldState = new WorldState();
+    public WorldState worldState = new WorldState();
     public List<Item> items = new List<Item>();
 
     public string _IPAddress = "127.0.0.1";
@@ -54,12 +59,17 @@ public class ConnectionManager : MonoBehaviour
     private event Action eventsClone;
     private UDPHandler udp_handler;
     private MenuManager menuManager;
-    public bool IsSelfHost { get { 
+    private MapLoader mapLoader;
+
+    public bool IsSelfHost
+    {
+        get
+        {
             if (client_self != null && this.client_self.connectedPlayer != null)
-                return this.client_self.connectedPlayer.playerInfo.isHost; 
+                return this.client_self.connectedPlayer.playerInfo.isHost;
             else return false;
-        } 
-    } 
+        }
+    }
 
 
 
@@ -70,47 +80,13 @@ public class ConnectionManager : MonoBehaviour
             udp_handler.Dispose();
         }
         Disconnect();
-        worldState.Items.Clear();
+        worldState.items.Clear();
 
     }
 
-    private void UpdateWorldState(WorldState newWorldState)
-    {
-        if (worldState.Equals(newWorldState))
-            return;
-
-        ItemStruct[] itemsToRemove = worldState.Items.Except(newWorldState.Items).ToArray();
-        ItemStruct[] newItems = newWorldState.Items.Except(worldState.Items).ToArray();
-        Item[] itemLoaded = FindObjectsByType<Item>(FindObjectsSortMode.None);
-        if (itemsToRemove.Length > 0)
-            foreach (ItemStruct item in itemsToRemove)
-            {
-                Item x = itemLoaded.FirstOrDefault(x => x.item.id == item.id);
-                if (x != null)
-                    Destroy(x.gameObject);
-            }
-
-        if (newItems.Length > 0)
-            foreach (ItemStruct item in newItems)
-            {
-                GameObject itemObject = Instantiate(Resources.Load<GameObject>(item.name));
-
-                Item itemObjectScript = itemObject.GetComponent<Item>();
-                itemObjectScript.item = item;
-            }
-
-        worldState = newWorldState;
-        //TODO: Add mobs
-    }
+    
 
 
-    private void UpdateItemPos(ItemPosData itemPosData)
-    {
-        Item itm = items.FirstOrDefault(x => x.item.id == itemPosData.id);
-        if (itm == null)
-            return;
-        itm.transforms = itemPosData.transforms;
-    }
     public void PrintByteArray(byte[] bytes, bool str = false)
     {
         var sb = new StringBuilder("new byte[] { ");
@@ -152,7 +128,7 @@ public class ConnectionManager : MonoBehaviour
     //note to self: don't code like an 8th grader you piece of dogshit.
     private void Disconnect()
     {
-        if (socket!=null && socket.Connected)
+        if (socket != null && socket.Connected)
         {
             connected = false;
             socket.Close();
@@ -167,7 +143,7 @@ public class ConnectionManager : MonoBehaviour
 
         udp_handler.Dispose();
         Debug.Log("Disconnected");
-        
+
 
     }
     private void CheckStatus()
@@ -264,6 +240,8 @@ public class ConnectionManager : MonoBehaviour
         else
         {
             Debug.LogError("Steam not initialized!");
+            WindowsMessageBox.ShowMessageBox("Steam is not running! Please run Steam and launch the game again.", "Error",16);
+            Application.Quit();
             //TODO: show message box informing that "Steam is not launched. Please open steam and run the game again.", and when the user clicks "OK" the game closes.
         }
         DontDestroyOnLoad(gameObject);
@@ -273,6 +251,7 @@ public class ConnectionManager : MonoBehaviour
         parser = new PacketParser();
 
         udp_handler = FindObjectOfType<UDPHandler>();
+        mapLoader = FindObjectOfType<MapLoader>();
 
         parser.RegisterHeaderProcessor(Headers.ack, ParseACK);
         parser.RegisterHeaderProcessor(Headers.echo, ParseECHO);
@@ -327,6 +306,9 @@ public class ConnectionManager : MonoBehaviour
             case var _ when packet.flag[0] == Flags.Response.itemData[0]:
                 ParseItemPosition(packet);
                 break;
+            case var _ when packet.flag[0] == Flags.Response.itemIntInf[0]:
+                ParseItemInteractionInfo(packet);
+                break;
         }
         //}catch(Exception e) { Debug.LogError($"{e}"); Debug.Log($"Error parsing packet {packet.header[0]}{packet.header[1]}{packet.flag[0]}{e.StackTrace} "); }
     }
@@ -361,10 +343,7 @@ public class ConnectionManager : MonoBehaviour
         transforms_.rotation = player.movement.GetAngles();
 
         PlayerData playerData = new PlayerData();
-        playerData.Inputs = new Inputs();
-        playerData.Inputs.isCrouching = player.movement.isCrouching;
-        playerData.Inputs.isSprinting = player.movement.isSprinting;
-        playerData.Inputs.isMoving = player.movement.isMoving;
+        playerData.inputs = player.inputs;
         playerData.id = player.playerInfo.id;
         playerData.transforms = transforms_;
 
@@ -378,7 +357,7 @@ public class ConnectionManager : MonoBehaviour
 
     public void SendItemLocationInfo(Item item)
     {
-        Transforms transforms_ = item.transforms;
+        Transforms transforms_ = item.item.transforms;
         ItemPosData itemPosData = new ItemPosData();
         itemPosData.transforms = transforms_;
         itemPosData.id = item.item.id;
@@ -391,7 +370,16 @@ public class ConnectionManager : MonoBehaviour
         packet.AddToPayload(mes);
         packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
     }
-
+    //TCP
+    public void SendItemInteractionInfo(ItemInteractionInfo interactionInfo)
+    {
+        string mes = JsonUtility.ToJson(interactionInfo);
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Post.itemIntInf;
+        packet.AddToPayload(mes);
+        packet.Send(stream);
+    }
     public void SendWorldState()
     {
         if (client_self == null)
@@ -414,10 +402,15 @@ public class ConnectionManager : MonoBehaviour
     private void ParseRejection(Packet packet)
     //friendzone :c
     {
-        if (packet.flag[0] == Flags.Response.closing_con[0] || packet.flag[0] == Flags.Response.lobbyClosing[0])
+        if (packet.flag[0] == Flags.Response.closing_con[0])
         {
             FindObjectOfType<MapLoader>().ReturnToMenu();
             Disconnect();
+            return;
+        }
+        if(packet.flag[0] == Flags.Response.lobbyClosing[0])
+        {
+            FindObjectOfType<MapLoader>().ReturnToMenu();
             return;
         }
         if (packet.payload.Length < 4)
@@ -442,19 +435,33 @@ public class ConnectionManager : MonoBehaviour
             int pay_len = reader.ReadInt32();
             _pay = reader.ReadBytes(pay_len);
         }
+        if (player_id == client_self.id)
+            return;
         ThreadManager.ExecuteOnMainThread(() =>
         {
-
-            if (player_id == client_self.id)
-                return;
             ClientHandle cl = clients.FirstOrDefault(x => x.id == player_id);
 
             if (cl != null)
-                cl.connectedPlayer.voice.InputPackets.Add(_pay);
+            {
+                cl.connectedPlayer.voice.ReceiveData(_pay);
+                Debug.Log($"Recieved voice packet for {cl.id}/{cl.name}");
+            }
         });
 
     }
+    public void RequestWorldState()
+    {
+        if (client_self.connectedPlayer.playerInfo.isHost)
+        {
+            Debug.LogError("Can't request a world state when we are a host!");
+            return;
+        }
 
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Request.worldState;
+        packet.Send(stream);
+    }
     private void RequestLobbyList()
     {
         if (client_self.lobbyInfo == null)
@@ -567,21 +574,61 @@ public class ConnectionManager : MonoBehaviour
             if (wS == null)
                 return;
 
-            UpdateWorldState(wS);
+            mapLoader.UpdateWorldState(wS);
 
         });
     }
     private void ParseItemPosition(Packet packet)
     {
-
         ThreadManager.ExecuteOnMainThread(() =>
         {
             ItemPosData itemPosData = packet.GetJson<ItemPosData>();
             if (itemPosData == null)
                 return;
 
-            UpdateItemPos(itemPosData);
+            Item itm = items.FirstOrDefault(x => x.item.id == itemPosData.id);
+            if (itm == null)
+                return;
+            if (itm.interactionInfo.pickedUp)
+                return;
 
+            itm.item.transforms = itemPosData.transforms;
+
+
+
+        });
+    }
+
+    private void ParseItemInteractionInfo(Packet packet)
+    {
+
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            ItemInteractionInfo itemIntInf = packet.GetJson<ItemInteractionInfo>();
+            if (itemIntInf == null)
+                return;
+
+            Item itm = items.FirstOrDefault(x => x.item.id == itemIntInf.itemID);
+            if (itm == null)
+                return;
+            
+            if (itemIntInf.pickedUp)
+            {
+                if (itemIntInf.pickedUpPlayerID != client_self.id)
+                {
+                    Player pl = clients.FirstOrDefault(x => x.id == itemIntInf.pickedUpPlayerID).connectedPlayer;
+                    pl.cam.gameObject.GetComponent<ItemInteraction>().RemotePickUp(itm);
+
+                }
+            }
+            else if (itm.interactionInfo.pickedUp)
+            {
+                Player pl = clients.FirstOrDefault(x => x.id == itemIntInf.pickedUpPlayerID).connectedPlayer;
+                ItemInteraction iti = pl.cam.gameObject.GetComponent<ItemInteraction>();
+                iti.RemoteDrop();
+
+            }
+            itm.interactionInfo = itemIntInf;
         });
     }
 
@@ -614,18 +661,18 @@ public class ConnectionManager : MonoBehaviour
 
     private void ParseTransformData(Packet packet) //TODO: ParseTransformData also syncs up the stats (should break it up in the future)
     {
-        Debug.Log("Got transform data.");
+
 
         ThreadManager.ExecuteOnMainThread(() =>
         {
-            
+
             PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
             foreach (PlayerData player in json_.players) // for each player in recieved json
             {
 
                 if (player.id == client_self.id)
                     continue;
-                Debug.Log($"Got transform data for {player.id}");
+
                 ClientHandle matchingPlayer = clients.FirstOrDefault(x => x.id == player.id); //find the connected local player by id
 
                 if (matchingPlayer != null)
@@ -634,7 +681,8 @@ public class ConnectionManager : MonoBehaviour
 
                     matchingPlayer.connectedPlayer.transforms = player.transforms;
                     matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
-                    matchingPlayer.connectedPlayer.movement.col.height = player.Inputs.isCrouching ? 2f : 0.8f;
+                    matchingPlayer.connectedPlayer.movement.col.height = player.inputs.isCrouching ? 0.8f : 2f;
+                    matchingPlayer.connectedPlayer.inputs = player.inputs;
                     matchingPlayer.connectedPlayer.stats.sanity = player.stats.sanity;
                     matchingPlayer.connectedPlayer.stats.alcohol = player.stats.alcohol;
 
@@ -671,5 +719,7 @@ public class ConnectionManager : MonoBehaviour
             eventsClone = null;
         }
     }
+
+    
 }
 

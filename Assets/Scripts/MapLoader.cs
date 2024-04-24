@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+
 
 public class MapLoader : MonoBehaviour
 {
@@ -47,6 +49,8 @@ public class MapLoader : MonoBehaviour
                 GameObject xd = conMan.clients.FirstOrDefault(x => x.id == client.id).connectedPlayer.transform.root.gameObject;
                 conMan.clients.Remove(conMan.clients.FirstOrDefault(x =>  x.id == client.id));
                 Destroy(xd);
+
+                Debug.Log($"Player {client.name}/{client.id} has left the lobby");
             }
         }
 
@@ -55,6 +59,7 @@ public class MapLoader : MonoBehaviour
             if (CurrentMapManager.mapInfo.players.FirstOrDefault(x => (x.name == client.name && x.id == client.id)) == null)
             {
 
+                Debug.Log($"Player {client.name}/{client.id} has joined the lobby");
                 CreatePlayer(client);
 
             }
@@ -69,6 +74,7 @@ public class MapLoader : MonoBehaviour
     {
         lobbyLoading = true; //god please please no why 
         ConnectionManager conMan = FindObjectOfType<ConnectionManager>();
+        conMan.worldState = new WorldState();
         string name = mapInfo.mapName;
         if (Application.CanStreamedLevelBeLoaded(name))
         {
@@ -88,7 +94,7 @@ public class MapLoader : MonoBehaviour
                 else
                 {
                     isSelfHost = pl.isHost;
-                    print("LOCAL PLAYER IS A HOST");
+                    
                 }
             }
             //TODO: make soimething to save settings and ever choose them.
@@ -102,6 +108,7 @@ public class MapLoader : MonoBehaviour
             }
             PlayerSpawnPosition r_spawn_pos = spawns[UnityEngine.Random.Range(0, spawns.Length)];
             GameObject local_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
+            local_player.name = conMan.client_self.name;
             Player lcp = local_player.GetComponent<Player>();
             lcp.playerInfo.isLocal = true;
             lcp.playerInfo.id = conMan.client_self.id;
@@ -110,9 +117,26 @@ public class MapLoader : MonoBehaviour
             if (conMan.client_self == null)
                 conMan.client_self = new ClientHandle();
             conMan.client_self.connectedPlayer = lcp;
-            lcp.voice.isLocal = true;
-            lcp.voice.Init();
- 
+            lcp.voice.Initialize(VoiceManager.Type.Local);
+
+
+            //WORLD STATE SYNCING
+            if (isSelfHost)
+            {
+                foreach(Item item in FindObjectsByType<Item>(FindObjectsSortMode.None))
+                {
+                    conMan.worldState.items.Add(item.item);
+                }
+                conMan.SendWorldState();
+            }
+            else
+            {
+                foreach(Item item in FindObjectsByType<Item>(FindObjectsSortMode.None))
+                {
+                    Destroy(item.gameObject);
+                }
+                conMan.RequestWorldState();
+            }
 
 
 
@@ -126,6 +150,71 @@ public class MapLoader : MonoBehaviour
         }
         lobbyLoading = false; //GOD DAMMIT
     }
+    public void UpdateWorldState(WorldState newWorldState)
+    {
+        Debug.Log("World state update!");
+        if (conMan.worldState.Equals(newWorldState))
+            return;
+
+        ItemStruct[] itemsToRemove = conMan.worldState.items.Except(newWorldState.items).ToArray();
+        ItemStruct[] newItems = newWorldState.items.Except(conMan.worldState.items).ToArray();
+        Item[] itemsLoaded = FindObjectsByType<Item>(FindObjectsSortMode.None);
+        if (itemsToRemove.Length > 0)
+            foreach (ItemStruct item in itemsToRemove)
+            {
+                Item x = itemsLoaded.FirstOrDefault(x => x.item.id == item.id);
+                if (x != null)
+                    Destroy(x.gameObject);
+            }
+
+        if (newItems.Length > 0)
+            foreach (ItemStruct item in newItems)
+            {
+                GameObject itemObject = Instantiate(Resources.Load<GameObject>(item.name));
+
+                Item itemObjectScript = itemObject.GetComponent<Item>();
+                itemObjectScript.item = item;
+
+                itemObject.transform.position = item.transforms.position;
+                itemObject.transform.eulerAngles = item.transforms.rotation;
+            }
+
+        conMan.worldState = newWorldState;
+        conMan.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
+        //TODO: Add mobs
+    }
+
+    //Here I fucking forgot that I started work on Item synchronization, and I did it fucking again. 
+    //I really need to use the fucking task-list ;-;
+    /*
+    public void UpdateItems(ItemList itemList)
+    {
+        if (conMan.IsSelfHost) return;
+
+        foreach(ItemStruct item in itemList.items)
+        {
+            Item itm = FindObjectsByType<Item>(FindObjectsSortMode.None).FirstOrDefault(x => x.item.id == item.id);
+            if(itm == null)
+            {
+                GameObject newObj = Instantiate((GameObject)Resources.Load(item.name,typeof(GameObject)));
+                Item newItem = newObj.GetComponent<Item>();
+                newItem.item.id = item.id;
+                newItem.item.activated = item.activated;
+                newObj.transform.position = itm.transforms.position;
+                newObj.transform.eulerAngles = itm.transforms.rotation;
+            }
+        }
+
+        foreach(Item localItem in FindObjectsByType<Item>(FindObjectsSortMode.None))
+        {
+            if(itemList.items.FirstOrDefault(x => x.id != localItem.item.id) == null)
+            {
+                Destroy(localItem.gameObject);
+                Debug.Log($"Destroying {localItem.name}, because recieved itemList doesn't contain it.");
+            }
+        }
+    }*/
+
     void CreatePlayer(PlayerInfo pl=null, bool self=false) //27.01.2024
     {                                                      //TODO: add every other variable that is to player.
                                                            //the fuck this function gets called out of nowhere? Booooo...
@@ -148,18 +237,23 @@ public class MapLoader : MonoBehaviour
         }
         
         GameObject new_player = Instantiate(PlayerPrefab,r_spawn_pos.transform.position,r_spawn_pos.transform.rotation);
+        new_player.name = pl.name;
+        new_player.GetComponent<MenuController>().uiCanvas.gameObject.SetActive(false);
+        new_player.GetComponent<MenuController>().enabled = self;
         Player npl = new_player.GetComponent<Player>();
         npl.playerInfo = pl;
         npl.movement.enabled = self;
         npl.cam.enabled = self;
+        npl.cam.gameObject.GetComponent<ItemInteraction>().remote = !self;
+        npl.cam.gameObject.GetComponent<MouseRotation>().enabled = self;
         npl.movement.enabled = self;
         npl.playerInfo.isLocal = self;
         npl.playerInfo.isHost = pl.isHost;
         npl.playerInfo.id = self ? conMan.client_self.id : npl.playerInfo.id;
         npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
-        npl.voice.isLocal = self;
-        npl.voice.Init();
+        npl.voice.Initialize(VoiceManager.Type.Remote); //TODO: Remember to change it depending on local/remote side
         npl.cam.GetComponent<AudioListener>().enabled = false;
+    
         ClientHandle binpl = new ClientHandle();
         binpl.id = self ? conMan.client_self.id : npl.playerInfo.id;
         binpl.name = self ? conMan.client_self.name : npl.playerInfo.name;

@@ -2,6 +2,7 @@
 using UnityEngine;
 using System;
 using JetBrains.Annotations;
+using System.Collections.Generic;
 
 [Serializable]
 public class PlayerInfo
@@ -32,13 +33,28 @@ public class ItemPosData
 }
 
 [Serializable]
+public class ItemInteractionInfo
+{
+    public int itemID;
+    public bool pickedUp;
+    public int pickedUpPlayerID;
+    public bool activated;
+}
+
+[Serializable]
+public class ItemList
+{
+    public List<ItemStruct> items = new List<ItemStruct>();
+}
+[Serializable]
 public class ItemStruct
 {
-    public int id;
-    public string name;
-    public bool activated;
-    public Transforms transforms;
 
+    public int id;
+    [Header("Name should be the same as the filename in Resources")]
+    public string name;
+    public Transforms transforms;
+    public bool canBeActivated;
     //wonder if that will be enough
 
 }

@@ -22,6 +22,7 @@ public class Player : MonoBehaviour
     private SoundEffectsManager sfxManager;
     [SerializeField]
     private bool m_debug = false;
+    public Inputs inputs = new Inputs();
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -41,34 +42,23 @@ public class Player : MonoBehaviour
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nRECV VOL: {voice.lastRecievedVolume}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nMIC ACTIVE: {voice.MicrophoneActive}", style);
     }
     void Update()
     {
         
         //TODO: (and the one more) transforms.target_velocity = 
-        lt2 += Time.deltaTime;
-        lt3 += Time.deltaTime;
+        
         if (!playerInfo.isLocal)
         {  //-----------------------------------------REMOTE CODE------------------------------------------------
-            Tools.UpdatePos(transform, rb, transforms, true);
+            Tools.UpdatePos(transform, rb, transforms,this, inputs);
         }
         else
         {  //-----------------------------------------LOCAL CODE-------------------------------------------------
+            lt2 += Time.deltaTime;
+            lt3 += Time.deltaTime;
             transforms.position = transform.position;
             transforms.real_velocity = rb.velocity;
-            //voice
-
-            if (voice.PacketsReady.Count > 0)
-            {
-                Debug.Log("Voice data avaliable!");
-                conMan.SendVoiceData(voice.GetPacket());
-            }
-            else
-            {
-                // Debug.Log("no voice data");
-            }
-
 
             //periodic position sending
             if (lt2 > 0.15f)
@@ -78,15 +68,6 @@ public class Player : MonoBehaviour
             }
 
 
-            //TEMP CODE ONLY FOR TESTING REMOVE IT LATER
-            if (lt3 > 5)
-            {
-                if (conMan.clients.Count == 0)
-                    return;
-                if (conMan.clients[0].connectedPlayer.voice.VoicePieces.Count > 0) //ugly \/
-                    sfxManager.PlaySound(conMan.clients[0].connectedPlayer.voice.VoicePieces[UnityEngine.Random.Range(0, conMan.clients[0].connectedPlayer.voice.VoicePieces.Count - 1)]);
-                lt3 = 0;
-            }
 
         }
     }

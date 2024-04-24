@@ -1,13 +1,20 @@
 using POpusCodec;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using POpusCodec.Enums;
-using Steamworks;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using Unity.Burst.Intrinsics;
+using UnityEngine;
 public class VoiceManager : MonoBehaviour
 {
+    public enum Type
+    {
+        Remote,
+        Local
+    }
+
+    private Type _type;
+
     public AudioSource mainAudioSource;
 
     List<float> micBuffer = new List<float>();
@@ -15,47 +22,40 @@ public class VoiceManager : MonoBehaviour
 
     public List<byte[]> PacketsReady { get; set; } = new List<byte[]>();
     public List<byte[]> InputPackets { get; set; } = new List<byte[]>();
-    public List<AudioClip> VoicePieces { get; private set; } = new List<AudioClip>();
 
     public SamplingRate samplerate = SamplingRate.Sampling48000;
     public SamplingRate samplerateMic = SamplingRate.Sampling48000;
+    public SamplingRate bitrateOpus = SamplingRate.Sampling48000;
+    public Bandwidth bandwith = Bandwidth.Fullband;
     public Channels opusChannels = Channels.Mono;
     public Channels clipChannels = Channels.Mono;
     public Delay delay = Delay.Delay40ms;
 
     private OpusEncoder encoder;
     private OpusDecoder decoder;
-    private int frameSize;
+    public int frameSize;
     private int pull;
     float xd;
     int pullCount;
     private float spierdalajxd;
-    public bool isLocal=false;
+    
     public float lastMicVolume { get; private set; }
     public float lastRecievedVolume { get; private set; }
 
     public bool MuteSelf { get; set; }
-    public float Sensitivity=5;
-    private bool initialized = false;
-    private bool isFocused = false;
-    static float[] CombineFloatArrays(List<float[]> floatArrays)
-    {
-        // Calculate total length of the combined array
-        int totalLength = floatArrays.Sum(arr => arr.Length);
+    public float Sensitivity = 5;
+    public bool initialized;
+    bool isFocused = false;
 
-        // Initialize a new array with the calculated length
-        float[] combinedArray = new float[totalLength];
+    public bool MicrophoneActive { get { return se || falloffHold; }  }
 
-        // Copy elements from each array to the combined array
-        int currentIndex = 0;
-        foreach (var arr in floatArrays)
-        {
-            Array.Copy(arr, 0, combinedArray, currentIndex, arr.Length);
-            currentIndex += arr.Length;
-        }
+    public bool playLocally { get; set; }
+    public ConnectionManager conMan { get; private set; }
 
-        return combinedArray;
-    }
+    [field: SerializeField]
+    public int micBufferSize { get; private set; }
+    [field: SerializeField]
+    public int receiveBufferSize { get; private set; }
     public static float CalculateAverageVolume(float[] pcmData)
     {
         if (pcmData == null || pcmData.Length == 0 || pcmData.Length % 2 != 0)
@@ -73,22 +73,19 @@ public class VoiceManager : MonoBehaviour
             sum += Math.Abs(sample);
         }
 
-
+        // Calculate the average volume
         return (sum / sampleCount) * 1000;
     }
 
-    // Start is called before the first frame update
-    void Start()
+    public void Initialize(Type type)
     {
-        
-    }
-    public void Init()
-    {
-        string x = isLocal ? "Local" : "Remote";
+        conMan = FindObjectOfType<ConnectionManager>();
+        _type = type;
+        string x = _type==Type.Local ? "Local" : "Remote";
         Debug.Log($"{x} voice inializing....");
         //AUDIO INIT
         mainAudioSource = gameObject.GetComponent<AudioSource>();
-        if (isLocal)
+        if (_type==Type.Local)
         {
             mainAudioSource.clip = Microphone.Start(null, true, 1, (int)samplerateMic);
             while (!(Microphone.GetPosition(null) > 0)) { /*nop*/ }
@@ -103,14 +100,18 @@ public class VoiceManager : MonoBehaviour
         decoder = new OpusDecoder(samplerate, opusChannels);
         encoder = new OpusEncoder(samplerate, opusChannels, (int)samplerate * 2, POpusCodec.Enums.OpusApplicationType.Voip); //TODO : Do not create a decoder if not needed! (pls do this)
         encoder.EncoderDelay = delay;
-        frameSize = encoder.FrameSizePerChannel * (int)opusChannels;
-
+        encoder.Bitrate = (int)bitrateOpus;
+        encoder.MaxBandwidth = bandwith;
+        encoder.ExpectedPacketLossPercentage = 10;
+        frameSize = encoder.FrameSizePerChannel;// * (int)opusChannels ;
+        
         print($"opus freq: {(int)encoder._inputSamplingRate}");
         micBuffer.Clear();
         initialized = true;
-        
+
         Debug.Log($"{x} voice inialized!");
     }
+
     private void OnDisable()
     {
         decoder.Dispose();
@@ -119,101 +120,88 @@ public class VoiceManager : MonoBehaviour
     }
     private void OnAudioPlaybackRead(float[] data)
     {
-        //nop
+        //if (receiveBuffer.Count < frameSize) bro frame size is for opus
+        //    return;
+
+
     }
-    List<float[]> tempSamples = new List<float[]>();
+    float falloffTracker = 0;
+    bool falloffHold;
+    bool se;
+    
+
     void OnAudioFilterRead(float[] data, int channels)
     {
-        
-        if (!MuteSelf && isLocal && initialized && isFocused) //xd
+        if ((_type == Type.Local && !MuteSelf) && isFocused)
         {
-           
+            // add mic data to buffer
             lastMicVolume = CalculateAverageVolume(data);
-            if (lastMicVolume > Sensitivity)
-            {
-                // add mic data to buffer
-                micBuffer.AddRange(data);
+            if (se || falloffHold) micBuffer.AddRange(data);
+            else micBuffer.Clear();
 
-                if (micBuffer.Count > 5000) //why does this happend?
-                {
-                    micBuffer.RemoveAt(0);
-                    Debug.LogWarning("Mic buffer too large - stripping.");
-                }
-            }
-            
+        }
+        else
+        {
+            micBuffer.Clear();
         }
 
+        
         // clear array 
         for (int i = 0; i < data.Length; i++)
         {
             data[i] = 0;
         }
-        if (!initialized) return;
 
-        if (!isLocal)
+        if (_type == Type.Remote && receiveBuffer.Count > 0)
         {
-            pull += data.Length;
-            pullCount += 1;
+            
+            if (receiveBuffer.Count < frameSize)
+                return;
+            //pullCount += 1;
             int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
-
+            if (data.Length > receiveBuffer.Count)
+                Debug.LogWarning("SRANIE");
+            //pull += pullSize;
             float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
             dataBuf.CopyTo(data, 0);
             receiveBuffer.RemoveRange(0, pullSize);
-
-            
-            // clear rest of data
-            for (int i = pullSize; i < data.Length; i++)
-            {
-                data[i] = 0;
-            }
+           
         }
+
+
     }
 
 
     void Update()
     {
-        //TODO: Make this \/
-        /*
-          //this code here \/ (below) (down here) (-up) captures some of the audio for the mimic to play later
+        micBufferSize = micBuffer.Count;
+        receiveBufferSize = receiveBuffer.Count;
+        isFocused =  Application.isFocused;
+        if (_type == Type.Local)
 
-            if (CalculateAverageVolume(dataBuf) > 15)//TODO: IMPORTANT! Make a algorithm that calculates the threshold volume, or set a static (prob. the algorithm)
-            {  
-                tempSamples.Add(dataBuf);
-                if (tempSamples.Count > (pull / pullCount) / (int)samplerate * 2) // average pull byte count divided by sample rate to get the +/- seconds
+            if (lastMicVolume > Sensitivity)
+            {
+                se = true;
+                falloffTracker = 0;
+            }
+            else
+            {
+                se = false;
+
+                if (falloffTracker > .5f)
+                    falloffHold = false;
+                else
                 {
-                    ThreadManager.ExecuteOnMainThread(() =>
-                    {
-                        try
-                        {
-                            if (VoicePieces.Count > 5)
-                                VoicePieces.RemoveAt(0);
-                            AudioClip newA = AudioClip.Create("vo", (int)samplerate * 2, (int)channels, (int)samplerate, false);
-                            newA.SetData(CombineFloatArrays(tempSamples), 0);
-                            VoicePieces.Add(newA);
-                            tempSamples.Clear();
-                        }
-                        catch { //TODO: do it propeltysdfsdfsd
-                                //nop
-                              }
-                    });
+                    falloffHold = true;
+                    falloffTracker += Time.deltaTime;
                 }
             }
-         */
 
-        isFocused = Application.isFocused;
-        if (!initialized) return;
-        if (pullCount > 0) //remove the delay (audio that wont get played anyway)
-                           //delay meaning the audio data in front of the array that wont get played;
-        {
-            int averageLen = (pull / pullCount);
-            if (receiveBuffer.Count / averageLen > 2)
-            {
-                receiveBuffer.RemoveRange(receiveBuffer.Count - averageLen - 1, averageLen);
-            }
-        }
-        if (micBuffer.Count >= frameSize) //encode micophone audio
+        SendData();
+       /* if (micBuffer.Count >= frameSize) //encode micophone audio
         {
             PacketsReady.Add(encoder.Encode(micBuffer.GetRange(0, frameSize).ToArray()));
+
             micBuffer.RemoveRange(0, frameSize);
         }
 
@@ -221,6 +209,27 @@ public class VoiceManager : MonoBehaviour
         {
             receiveBuffer.AddRange(decoder.DecodePacketFloat(InputPackets[0]));
             InputPackets.RemoveAt(0);
+        }*/
+    }
+    public void ReceiveData(byte[] encodedData)
+    {
+
+        // the data would need to be sent over the network, we just decode it now to test the result
+        receiveBuffer.AddRange(decoder.DecodePacketFloat(encodedData));
+    }
+
+    void SendData()
+    {
+        if (_type == Type.Local)
+        {
+            // take pieces of buffer and send data
+            while (micBuffer.Count > frameSize)
+            {
+                byte[] encodedData = encoder.Encode(micBuffer.GetRange(0, frameSize).ToArray());
+                conMan.SendVoiceData(encodedData);
+                if (playLocally) ReceiveData(encodedData);
+                micBuffer.RemoveRange(0, frameSize);
+            }
         }
     }
 

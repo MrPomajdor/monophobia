@@ -7,14 +7,23 @@ public class MenuController : MonoBehaviour
     bool menuVisible=false;
     bool lastMenuVisible=false;
     public Animator animator;
+    public Transform uiCanvas;
     void Start()
     {
-        
+        if (!menuVisible)
+            Cursor.lockState = CursorLockMode.Locked;
+        else
+            Cursor.lockState = CursorLockMode.None;
+
+        Cursor.visible = menuVisible;
+
+        animator.Play("close");
     }
 
     // Update is called once per frame
     void Update()
     {
+       
         if(Input.GetKeyDown(KeyCode.Escape)) {
             menuVisible = !menuVisible;
 

@@ -32,6 +32,7 @@ public static class Flags
         public static byte[] playerList = new byte[]{ 0x04 };
         public static byte[] lobbyList = new byte[]{ 0x07 };
         public static byte[] worldState = new byte[] { 0xD0 };
+        public static byte[] itemList = new byte[] { 0x1A };
     }
     public static class Post
     {
@@ -43,6 +44,7 @@ public static class Flags
         public static byte[] lobbyInfo = new byte[] { 0xA1 };
         public static byte[] worldState = new byte[] { 0xA2 };
         public static byte[] itemPos = new byte[] { 0xA3 };
+        public static byte[] itemIntInf = new byte[] { 0xA4 };
         public static byte[] voice = new byte[] { 0xAC };
 
     }
@@ -60,6 +62,8 @@ public static class Flags
         public static byte[] lobbyInfo = new byte[] { 0x09 };
         public static byte[] worldState = new byte[] { 0xC2 };
         public static byte[] itemData = new byte[] { 0xC3 };
+        public static byte[] itemIntInf = new byte[] { 0xC5 };
+        public static byte[] itemList = new byte[] { 0xA1 };
         public static byte[] playerData = new byte[] { 0xC4 }; //warning: contents explosive
         public static byte[] voice = new byte[] { 0x0C };
 

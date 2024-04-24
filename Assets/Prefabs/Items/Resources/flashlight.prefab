@@ -224,17 +224,22 @@ MonoBehaviour:
   item:
     id: 0
     name: flashlight
-    activated: 0
     transforms:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0}
       target_velocity: {x: 0, y: 0, z: 0}
       real_velocity: {x: 0, y: 0, z: 0}
+    canBeActivated: 1
   tooltip:
     title: Flashlight
     description: A thing that makes light
-    use: Use it to make light
-  pickedUp: 0
+    use: Click LMB to power on/off the flashlight
+  interactionInfo:
+    itemID: 0
+    pickedUp: 0
+    pickedUpPlayerID: 0
+    activated: 0
+  <lastNetworkTime>k__BackingField: 0
 --- !u!114 &8446134202571673065
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -16,7 +16,7 @@ public class Flashlight : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        m_Light.enabled = m_Item.item.activated;
-        glowingThing.SetActive(m_Item.item.activated);
+        m_Light.enabled = m_Item.interactionInfo.activated;
+        glowingThing.SetActive(m_Item.interactionInfo.activated);
     }
 }

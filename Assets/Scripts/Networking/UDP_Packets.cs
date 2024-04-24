@@ -21,6 +21,7 @@ public class Inputs
     public bool isSprinting;
     public bool isMoving;
     public bool isCrouching;
+    public Vector3 MoveDirection;
 
 }
 
@@ -38,7 +39,7 @@ public class PlayerData
 {
     public string type = "PlayerPositionData";
     public Transforms transforms;
-    public Inputs Inputs;
+    public Inputs inputs;
     public int id=-1;
     public SerializableStats stats;
 }

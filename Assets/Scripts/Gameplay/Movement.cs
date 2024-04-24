@@ -83,7 +83,11 @@ public class Movement : MonoBehaviour
 
     private void Update()
     {
-        
+        playersc.inputs.MoveDirection = moveDirection;
+        playersc.inputs.isMoving = isMoving;
+        playersc.inputs.isSprinting = isSprinting;
+        playersc.inputs.isCrouching = isCrouching;
+
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, fov, Time.deltaTime * 10);
         isGrounded = Physics.Raycast(transform.position, Vector3.down, GroundCheckHeight);
         horMovement = Input.GetAxisRaw("Horizontal");
@@ -91,6 +95,7 @@ public class Movement : MonoBehaviour
 
         moveDirection = mouse.transform.forward * vertMovement + mouse.transform.right * horMovement;
         moveDirection = new Vector3(moveDirection.x, 0, moveDirection.z);
+        
         if (moveDirection.magnitude > 0)
             isMoving = true;
         else
