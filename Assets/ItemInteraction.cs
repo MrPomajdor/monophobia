@@ -1,14 +1,17 @@
+using System.Collections.Generic;
+using Unity.Burst.CompilerServices;
 using UnityEngine;
 
 public class ItemInteraction : MonoBehaviour
 {
     private Camera m_Camera;
     private Player SelfPlayer;
+    private InventoryManager SelfInventory;
     [SerializeField]
     private float m_maxRaycastDistance = 10;
     [SerializeField]
     private float m_translateStrength = 10;
-    public Item currentlyPickedUp { get; private set; }
+
     private Collider currentlyPickedUpCollider;
     public Transform holdPoint;
     private float t;
@@ -17,80 +20,35 @@ public class ItemInteraction : MonoBehaviour
     public bool remotePickedUp { get; private set; }
     public bool remote;
 
+   
+
     void Start()
     {
         m_Camera = GetComponent<Camera>();
         SelfPlayer = transform.root.GetComponent<Player>();
+        SelfInventory = transform.root.GetComponent<InventoryManager>();
     }
 
-    public void RemotePickUp(Item item)
-    {
-        remotePickedUp = true;
-        currentlyPickedUp = item;
-        currentlyPickedUpCollider = currentlyPickedUp.gameObject.GetComponent<Collider>();
-        currentlyPickedUpCollider.isTrigger = true;
 
-    }
-    public void RemoteDrop()
-    {
-        Debug.Log("Remote Dropping item");
-        remotePickedUp = false;
-        currentlyPickedUpCollider.isTrigger = false;
-        currentlyPickedUp.rb.velocity = m_Camera.transform.forward*5; //TODO: set a variable for strength
-        currentlyPickedUp = null;
-        currentlyPickedUpCollider = null;
-
-    }
 
     // Update is called once per frame
     void Update()
     {
         
 
-        if (currentlyPickedUp != null)
-        {
-            if (holdPoint == null)
-            {
-                Debug.LogError("Pick-up hold point is unnasigned!");
-                return;
-            }
-
-            t += Time.deltaTime;
-            currentlyPickedUp.transform.rotation = Quaternion.Lerp(currentlyPickedUp.transform.rotation, holdPoint.transform.rotation, t * lerpSpeed);//TODO: make it fucking work
-
-            currentlyPickedUp.rb.velocity = (holdPoint.transform.position - currentlyPickedUp.transform.position) * m_translateStrength;
-        }
-        else
-        {
-            t = 0;
-        }
 
         if (remote) return; //-----------------------------LOCAL CODE BELOW----------------------------
 
-        if (Input.GetKeyDown(KeyCode.Mouse0) && currentlyPickedUp.item.canBeActivated)
+        if (Input.GetKeyDown(KeyCode.Mouse0) && SelfInventory.current!=null && SelfInventory.current.itemStruct.canBeActivated)
         {
-            if (currentlyPickedUp != null )
-            {
-                currentlyPickedUp.interactionInfo.activated = !currentlyPickedUp.interactionInfo.activated;
-                currentlyPickedUp.UpdateInteractionNetwork();
-            }
+
+            SelfInventory.current.interactionInfo.activated = !SelfInventory.current.interactionInfo.activated;
+            SelfInventory.current.UpdateInteractionNetwork();
+
         }
         if (Input.GetKeyDown(KeyCode.F))
         {
-            if (currentlyPickedUp != null)
-            {
-                currentlyPickedUp.interactionInfo.pickedUp = false;
-                currentlyPickedUp.interactionInfo.pickedUpPlayerID = -1;
-                currentlyPickedUp.rb.velocity = m_Camera.transform.forward * 5;
-                currentlyPickedUp.interactionInfo.pickedUp = false;
-                currentlyPickedUp.interactionInfo.pickedUpPlayerID = -1;
-                currentlyPickedUp.UpdateInteractionNetwork();
-                currentlyPickedUp = null;
-                currentlyPickedUpCollider.isTrigger = false;
-                currentlyPickedUpCollider = null;
 
-                return;
-            }
             RaycastHit hit;
             if (Physics.Raycast(transform.position, transform.forward, out hit, m_maxRaycastDistance))
             {
@@ -102,18 +60,12 @@ public class ItemInteraction : MonoBehaviour
                 {
                     Item _itm = hit.collider.gameObject.GetComponent<Item>();
 
-                    if (_itm.interactionInfo.pickedUp) return; //this is for checking if another player is currentyl holding it. If yes, go fuck yourself.
+                    if (_itm.PickedUp) return; //this is for checking if another player is currentyl holding it. If yes, go fuck yourself.
 
                     switch (_itm.type)
                     {
                         case ItemType.PickUp:
-                            currentlyPickedUp = _itm;
-                            _itm.interactionInfo.pickedUp = true;
-                            currentlyPickedUp.interactionInfo.pickedUp = true;
-                            currentlyPickedUp.interactionInfo.pickedUpPlayerID = SelfPlayer.playerInfo.id;
-                            currentlyPickedUp.UpdateInteractionNetwork();
-                            hit.collider.isTrigger = true;
-                            currentlyPickedUpCollider = hit.collider;
+                            SelfInventory.PickUpItem(_itm);
                             return;
 
                         case ItemType.StaticInteractive:
@@ -122,5 +74,15 @@ public class ItemInteraction : MonoBehaviour
                 }
             }
         }
+
+        if(Input.GetKeyDown(KeyCode.G)) {
+            if (SelfInventory.current != null)
+            {
+                SelfInventory.DropCurrent();
+                return;
+            }
+        }
     }
+
+   
 }

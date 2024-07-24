@@ -114,18 +114,21 @@ public class MapLoader : MonoBehaviour
             lcp.playerInfo.id = conMan.client_self.id;
             lcp.playerInfo.name = conMan.client_self.name;
             lcp.playerInfo.isHost = isSelfHost;
+
             if (conMan.client_self == null)
                 conMan.client_self = new ClientHandle();
             conMan.client_self.connectedPlayer = lcp;
             lcp.voice.Initialize(VoiceManager.Type.Local);
+            lcp.voice.mainAudioSource.bypassReverbZones = true;
 
-
+            
             //WORLD STATE SYNCING
             if (isSelfHost)
             {
-                foreach(Item item in FindObjectsByType<Item>(FindObjectsSortMode.None))
+                conMan.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
+                foreach (Item item in conMan.items)
                 {
-                    conMan.worldState.items.Add(item.item);
+                    conMan.worldState.items.Add(item.itemStruct);
                 }
                 conMan.SendWorldState();
             }
@@ -162,7 +165,7 @@ public class MapLoader : MonoBehaviour
         if (itemsToRemove.Length > 0)
             foreach (ItemStruct item in itemsToRemove)
             {
-                Item x = itemsLoaded.FirstOrDefault(x => x.item.id == item.id);
+                Item x = itemsLoaded.FirstOrDefault(x => x.itemStruct.id == item.id);
                 if (x != null)
                     Destroy(x.gameObject);
             }
@@ -172,8 +175,8 @@ public class MapLoader : MonoBehaviour
             {
                 GameObject itemObject = Instantiate(Resources.Load<GameObject>(item.name));
 
-                Item itemObjectScript = itemObject.GetComponent<Item>();
-                itemObjectScript.item = item;
+                //Item itemObjectScript = itemObject.GetComponent<Item>();
+                //itemObjectScript.item = item;
 
                 itemObject.transform.position = item.transforms.position;
                 itemObject.transform.eulerAngles = item.transforms.rotation;
@@ -184,36 +187,7 @@ public class MapLoader : MonoBehaviour
         //TODO: Add mobs
     }
 
-    //Here I fucking forgot that I started work on Item synchronization, and I did it fucking again. 
-    //I really need to use the fucking task-list ;-;
-    /*
-    public void UpdateItems(ItemList itemList)
-    {
-        if (conMan.IsSelfHost) return;
 
-        foreach(ItemStruct item in itemList.items)
-        {
-            Item itm = FindObjectsByType<Item>(FindObjectsSortMode.None).FirstOrDefault(x => x.item.id == item.id);
-            if(itm == null)
-            {
-                GameObject newObj = Instantiate((GameObject)Resources.Load(item.name,typeof(GameObject)));
-                Item newItem = newObj.GetComponent<Item>();
-                newItem.item.id = item.id;
-                newItem.item.activated = item.activated;
-                newObj.transform.position = itm.transforms.position;
-                newObj.transform.eulerAngles = itm.transforms.rotation;
-            }
-        }
-
-        foreach(Item localItem in FindObjectsByType<Item>(FindObjectsSortMode.None))
-        {
-            if(itemList.items.FirstOrDefault(x => x.id != localItem.item.id) == null)
-            {
-                Destroy(localItem.gameObject);
-                Debug.Log($"Destroying {localItem.name}, because recieved itemList doesn't contain it.");
-            }
-        }
-    }*/
 
     void CreatePlayer(PlayerInfo pl=null, bool self=false) //27.01.2024
     {                                                      //TODO: add every other variable that is to player.
@@ -253,7 +227,8 @@ public class MapLoader : MonoBehaviour
         npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
         npl.voice.Initialize(VoiceManager.Type.Remote); //TODO: Remember to change it depending on local/remote side
         npl.cam.GetComponent<AudioListener>().enabled = false;
-    
+        npl.GetComponent<InventoryManager>().Remote = !self;
+
         ClientHandle binpl = new ClientHandle();
         binpl.id = self ? conMan.client_self.id : npl.playerInfo.id;
         binpl.name = self ? conMan.client_self.name : npl.playerInfo.name;

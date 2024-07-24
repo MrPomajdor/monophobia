@@ -14,6 +14,7 @@ public class PlayerInfo
     public string skin;
     public bool isHost;
     public bool isLocal;
+    //TODO: public int[] inventory;
     //TODO: public int health;
     //TODO: public int sanity;
 
@@ -36,8 +37,6 @@ public class ItemPosData
 public class ItemInteractionInfo
 {
     public int itemID;
-    public bool pickedUp;
-    public int pickedUpPlayerID;
     public bool activated;
 }
 
@@ -55,6 +54,7 @@ public class ItemStruct
     public string name;
     public Transforms transforms;
     public bool canBeActivated;
+    
     //wonder if that will be enough
 
 }

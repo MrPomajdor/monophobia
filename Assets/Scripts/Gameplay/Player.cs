@@ -51,7 +51,7 @@ public class Player : MonoBehaviour
         
         if (!playerInfo.isLocal)
         {  //-----------------------------------------REMOTE CODE------------------------------------------------
-            Tools.UpdatePos(transform, rb, transforms,this, inputs);
+            Tools.UpdatePos(transform, rb, transforms,this, inputs,5f);
         }
         else
         {  //-----------------------------------------LOCAL CODE-------------------------------------------------

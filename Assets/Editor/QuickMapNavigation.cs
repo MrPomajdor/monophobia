@@ -18,6 +18,7 @@ public class QuickMapNavigation : EditorWindow
     private void OnGUI()
     {
         GUILayout.Label("Change level to:");
+        
        if(GUILayout.Button("Main Menu")){
             EditorSceneManager.OpenScene("Assets/Maps/mainmenu/mainmenu.unity");
         }
@@ -29,6 +30,12 @@ public class QuickMapNavigation : EditorWindow
         if (GUILayout.Button("Lobby"))
         {
             EditorSceneManager.OpenScene("Assets/Maps/lobby0/lobby0.unity");
+        }
+        GUILayout.Space(10);
+        GUILayout.Label("Developement levels:");
+        if (GUILayout.Button("ScriptDev"))
+        {
+            EditorSceneManager.OpenScene("Assets/Maps/dev/script_dev.unity");
         }
     }
 }

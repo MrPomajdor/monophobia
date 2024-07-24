@@ -20,11 +20,11 @@ public static class Tools
         if (Vector3.Distance(transform.position, transforms.position) > 2)
             transform.position = transforms.position;
         if (!player)
-            transform.rotation = Quaternion.Slerp(transform.rotation,Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z),smoothingFactor*Time.deltaTime);
+            transform.rotation = Quaternion.Lerp(transform.rotation,Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z),smoothingFactor*Time.deltaTime);
         else
         {
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, transforms.rotation.y, 0),smoothingFactor*Time.deltaTime);
-            player.cam.transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, 0); //TODO: Smooth
+            player.cam.transform.rotation = Quaternion.Slerp(player.cam.transform.rotation,Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, 0), smoothingFactor * Time.deltaTime); 
             rb.AddForce(inputs.MoveDirection*500 * Time.deltaTime,ForceMode.Force);
         }
        
@@ -45,7 +45,7 @@ public class ConnectionManager : MonoBehaviour
     public string _IPAddress = "127.0.0.1";
     public PacketParser parser;
     private TcpClient socket;
-    private NetworkStream stream;
+    public NetworkStream stream {  get; private set; }
     private byte[] recvBuffer;
     public static int dataBufferSize = 1024;
     public bool connected;
@@ -57,7 +57,7 @@ public class ConnectionManager : MonoBehaviour
     private PlayerInfo[] players;
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;
-    private UDPHandler udp_handler;
+    public UDPHandler udp_handler { get; private set; }
     private MenuManager menuManager;
     private MapLoader mapLoader;
 
@@ -168,6 +168,7 @@ public class ConnectionManager : MonoBehaviour
         {
             Debug.Log("Could not connect!");
             //TODO: Try to connect again.
+            Connect(IPAddress.Parse(_IPAddress));
             return;
         }
         Debug.Log("Connected!");
@@ -233,7 +234,7 @@ public class ConnectionManager : MonoBehaviour
     }
     private void Start()
     {
-        if (SteamManager.Initialized) //TODO: IMPORTANT!!! Handle when steam isn't running
+        if (SteamManager.Initialized)
         {
             Debug.Log($"Steam username: {SteamFriends.GetPersonaName()}");
         }
@@ -242,7 +243,7 @@ public class ConnectionManager : MonoBehaviour
             Debug.LogError("Steam not initialized!");
             WindowsMessageBox.ShowMessageBox("Steam is not running! Please run Steam and launch the game again.", "Error",16);
             Application.Quit();
-            //TODO: show message box informing that "Steam is not launched. Please open steam and run the game again.", and when the user clicks "OK" the game closes.
+            
         }
         DontDestroyOnLoad(gameObject);
         menuManager = FindAnyObjectByType<MenuManager>();
@@ -309,6 +310,15 @@ public class ConnectionManager : MonoBehaviour
             case var _ when packet.flag[0] == Flags.Response.itemIntInf[0]:
                 ParseItemInteractionInfo(packet);
                 break;
+            case var _ when packet.flag[0] == Flags.Response.itemDrop[0]:
+                ParseItemDrop(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.itemPickup[0]:
+                ParseItemPickup (packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.inventorySwitch[0]:
+                ParseInventorySwitch(packet);
+                break;
         }
         //}catch(Exception e) { Debug.LogError($"{e}"); Debug.Log($"Error parsing packet {packet.header[0]}{packet.header[1]}{packet.flag[0]}{e.StackTrace} "); }
     }
@@ -357,10 +367,10 @@ public class ConnectionManager : MonoBehaviour
 
     public void SendItemLocationInfo(Item item)
     {
-        Transforms transforms_ = item.item.transforms;
+        Transforms transforms_ = item.itemStruct.transforms;
         ItemPosData itemPosData = new ItemPosData();
         itemPosData.transforms = transforms_;
-        itemPosData.id = item.item.id;
+        itemPosData.id = item.itemStruct.id;
 
 
         string mes = JsonUtility.ToJson(itemPosData);
@@ -533,6 +543,88 @@ public class ConnectionManager : MonoBehaviour
             }
         }
     }
+
+    private void ParseItemPickup(Packet packet)
+    {
+
+
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+
+            using (MemoryStream _stream = new MemoryStream(packet.payload))
+            using (BinaryReader reader = new BinaryReader(_stream))
+            {
+                int playerID = reader.ReadInt32();
+                int itemID = reader.ReadInt32();
+                Debug.Log($"Player {playerID} picked up {itemID}");
+                ClientHandle pl = clients.FirstOrDefault(x => x.id == playerID);
+                Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemID);
+
+                if (itm==null || pl==null) return;
+
+                pl.connectedPlayer.GetComponent<InventoryManager>().PickUpItem(itm);
+            }
+
+        });
+
+    }
+
+
+    private void ParseItemDrop(Packet packet) 
+    {
+
+
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+
+            using (MemoryStream _stream = new MemoryStream(packet.payload))
+            using (BinaryReader reader = new BinaryReader(_stream))
+            {
+                int playerID = reader.ReadInt32();
+                int itemID = reader.ReadInt32();
+
+
+                ClientHandle pl = clients.FirstOrDefault(x => x.id == playerID);
+
+                if (pl == null) return;
+
+                InventoryManager invMan = pl.connectedPlayer.GetComponent<InventoryManager>();
+                if (invMan.current.itemStruct.id == itemID)
+                    invMan.DropCurrent();
+                else
+                {
+                    invMan.SwitchItemByID(itemID);
+                    invMan.DropCurrent();
+                }
+            }
+
+        });
+
+    }
+    private void ParseInventorySwitch(Packet packet)
+    {
+
+
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+
+            using (MemoryStream _stream = new MemoryStream(packet.payload))
+            using (BinaryReader reader = new BinaryReader(_stream))
+            {
+                int playerID = reader.ReadInt32();
+                int itemID = reader.ReadInt32();
+
+                ClientHandle pl = clients.FirstOrDefault(x => x.id == playerID);
+               
+
+                if (pl == null) return;
+
+                pl.connectedPlayer.GetComponent<InventoryManager>().SwitchItemByID(itemID);
+            }
+
+        });
+
+    }
     private void ParseDisconnect(Packet packet)
     {
         Debug.Log("Disconnected by server!");
@@ -586,13 +678,13 @@ public class ConnectionManager : MonoBehaviour
             if (itemPosData == null)
                 return;
 
-            Item itm = items.FirstOrDefault(x => x.item.id == itemPosData.id);
+            Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemPosData.id);
             if (itm == null)
                 return;
-            if (itm.interactionInfo.pickedUp)
+            if (itm.PickedUp)
                 return;
 
-            itm.item.transforms = itemPosData.transforms;
+            itm.itemStruct.transforms = itemPosData.transforms;
 
 
 
@@ -608,26 +700,12 @@ public class ConnectionManager : MonoBehaviour
             if (itemIntInf == null)
                 return;
 
-            Item itm = items.FirstOrDefault(x => x.item.id == itemIntInf.itemID);
+            Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemIntInf.itemID);
             if (itm == null)
                 return;
-            
-            if (itemIntInf.pickedUp)
-            {
-                if (itemIntInf.pickedUpPlayerID != client_self.id)
-                {
-                    Player pl = clients.FirstOrDefault(x => x.id == itemIntInf.pickedUpPlayerID).connectedPlayer;
-                    pl.cam.gameObject.GetComponent<ItemInteraction>().RemotePickUp(itm);
 
-                }
-            }
-            else if (itm.interactionInfo.pickedUp)
-            {
-                Player pl = clients.FirstOrDefault(x => x.id == itemIntInf.pickedUpPlayerID).connectedPlayer;
-                ItemInteraction iti = pl.cam.gameObject.GetComponent<ItemInteraction>();
-                iti.RemoteDrop();
 
-            }
+
             itm.interactionInfo = itemIntInf;
         });
     }
@@ -693,6 +771,9 @@ public class ConnectionManager : MonoBehaviour
         });
 
     }
+
+
+    
     #endregion
 
     #endregion

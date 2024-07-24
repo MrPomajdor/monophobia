@@ -510,7 +510,7 @@ GameObject:
   - component: {fileID: 8898737729046180766}
   - component: {fileID: 2046099435509875341}
   m_Layer: 0
-  m_Name: Kostka.001
+  m_Name: Screen
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

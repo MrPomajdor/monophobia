@@ -221,7 +221,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   type: 0
-  item:
+  itemStruct:
     id: 0
     name: flashlight
     transforms:
@@ -230,16 +230,17 @@ MonoBehaviour:
       target_velocity: {x: 0, y: 0, z: 0}
       real_velocity: {x: 0, y: 0, z: 0}
     canBeActivated: 1
+  thumbnail: {fileID: 21300000, guid: baa0bc2d798d7734fb4774cc8671e2d3, type: 3}
   tooltip:
     title: Flashlight
     description: A thing that makes light
     use: Click LMB to power on/off the flashlight
   interactionInfo:
     itemID: 0
-    pickedUp: 0
-    pickedUpPlayerID: 0
     activated: 0
+  heldBy: {fileID: 0}
   <lastNetworkTime>k__BackingField: 0
+  PickedUp: 0
 --- !u!114 &8446134202571673065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -349,9 +350,9 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 680277.8
-  m_Range: 9576.8
-  m_SpotAngle: 80
+  m_Intensity: 4194304
+  m_Range: 236
+  m_SpotAngle: 63.700245
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
@@ -380,7 +381,7 @@ Light:
       e32: 0
       e33: 1
     m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
+  m_Cookie: {fileID: 2800000, guid: 47a5527fbad97e748b48368a6c5dc456, type: 3}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -392,7 +393,7 @@ Light:
   m_LightShadowCasterMode: 2
   m_AreaSize: {x: 0.5, y: 0.5}
   m_BounceIntensity: 0
-  m_ColorTemperature: 6999.01
+  m_ColorTemperature: 8386
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 10}
   m_UseBoundingSphereOverride: 0

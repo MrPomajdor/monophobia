@@ -12,16 +12,19 @@ public class Item : MonoBehaviour
     public static List<int> otherItems = new List<int>();
     public ItemType type;
     private ConnectionManager conMan;
-    public ItemStruct item;
+    public ItemStruct itemStruct;
+    public Sprite thumbnail;
     public Tooltip tooltip;
     public Rigidbody rb { get; private set; }
-    public ItemInteractionInfo interactionInfo  = new ItemInteractionInfo();
+    public ItemInteractionInfo interactionInfo = new ItemInteractionInfo();
     private float falloffTracker;
     private bool falloffHold;
     private bool se;
-
+    public Player heldBy;
     [field: SerializeField]
     public float lastNetworkTime { get; private set; }
+
+    public bool PickedUp = false;
     void Start()
     {
         conMan = FindAnyObjectByType<ConnectionManager>();
@@ -31,8 +34,8 @@ public class Item : MonoBehaviour
         if (conMan.IsSelfHost)
         {
             //if we are the host, set an id
-            item.id = otherItems.Count;
-            otherItems.Add(item.id);
+            itemStruct.id = otherItems.Count;
+            otherItems.Add(itemStruct.id);
         }
         else
         {
@@ -43,7 +46,7 @@ public class Item : MonoBehaviour
             //this is not the way to do it. It won't work.
             //The map loader script will destroy every Item (if we are NOT a host), then send a [please give me list of the current items] packet, and the host will respond with the list!
             //(propably it will)
-         
+
 
         }
 
@@ -57,50 +60,61 @@ public class Item : MonoBehaviour
     {
         lastNetworkTime += Time.deltaTime;
 
-        
-         
+
+
 
 
         if (conMan.IsSelfHost)
         {
-            if (lastNetworkTime > 0.2f && !interactionInfo.pickedUp)
+            if (lastNetworkTime > 0.2f && !PickedUp)
             {
-                lastNetworkTime = 0;
-                if (item.transforms == null)
-                    item.transforms = new Transforms();
-                //TODO: Don't send unnececary location data if the item is stationary. The same for Player.
-                item.transforms.position = transform.position;
-                item.transforms.rotation = transform.eulerAngles;
-                item.transforms.real_velocity = rb.velocity;
-                conMan.SendItemLocationInfo(this);
-            }
-        }
-        else
-        {
-
-            if (interactionInfo.pickedUp)
-            {
-                se = true;
-                falloffTracker = 0;
+                {
+                    lastNetworkTime = 0;
+                    if (itemStruct.transforms == null)
+                        itemStruct.transforms = new Transforms();
+                    //TODO: Don't send unnececary location data if the item is stationary. The same for Player.
+                    itemStruct.transforms.position = transform.position;
+                    itemStruct.transforms.rotation = transform.eulerAngles;
+                    itemStruct.transforms.real_velocity = rb.velocity;
+                    conMan.SendItemLocationInfo(this);
+                }
             }
             else
             {
-                se = false;
-                if (falloffTracker > .5f)
-                    falloffHold = false;
+                
+                /*
+                if (PickedUp)
+                {
+                    se = true;
+                    falloffTracker = 0;
+                }
                 else
                 {
-                    falloffHold = true;
-                    falloffTracker += Time.deltaTime;
+                    se = false;
+                    if (falloffTracker > .5f)
+                        falloffHold = false;
+                    else
+                    {
+                        falloffHold = true;
+                        falloffTracker += Time.deltaTime;
+                    }
                 }
+
+                if (!se && !falloffHold)
+                    Tools.UpdatePos(transform, rb, itemStruct.transforms);
+                */
             }
 
-            if(!se && !falloffHold)
-                Tools.UpdatePos(transform, rb, item.transforms);
+
         }
-        
+        else
+        {
+            if (!PickedUp)
+            {
+                Tools.UpdatePos(transform, rb, itemStruct.transforms);
+            }
+        }
+
 
     }
-
-   
 }

@@ -44,6 +44,9 @@ public static class Flags
         public static byte[] lobbyInfo = new byte[] { 0xA1 };
         public static byte[] worldState = new byte[] { 0xA2 };
         public static byte[] itemPos = new byte[] { 0xA3 };
+        public static byte[] itemPickup = new byte[] { 0xA5 };
+        public static byte[] itemDrop = new byte[] { 0xA6 };
+        public static byte[] inventorySwitch = new byte[] { 0xA7 };
         public static byte[] itemIntInf = new byte[] { 0xA4 };
         public static byte[] voice = new byte[] { 0xAC };
 
@@ -64,6 +67,10 @@ public static class Flags
         public static byte[] itemData = new byte[] { 0xC3 };
         public static byte[] itemIntInf = new byte[] { 0xC5 };
         public static byte[] itemList = new byte[] { 0xA1 };
+        public static byte[] itemPickup = new byte[] { 0xC6 };
+        public static byte[] itemDrop = new byte[] { 0xC7 };
+        public static byte[] inventorySwitch = new byte[] { 0xC8 };
+
         public static byte[] playerData = new byte[] { 0xC4 }; //warning: contents explosive
         public static byte[] voice = new byte[] { 0x0C };
 
