@@ -20,6 +20,7 @@ public class Player : MonoBehaviour
     public VoiceManager voice { get; private set; }
     public Stats stats { get; private set; }
     private SoundEffectsManager sfxManager;
+    private FootstepsSFX footsteps;
     [SerializeField]
     private bool m_debug = false;
     public Inputs inputs = new Inputs();
@@ -29,6 +30,7 @@ public class Player : MonoBehaviour
         conMan = FindObjectOfType<ConnectionManager>();
         stats = GetComponent<Stats>();
         sfxManager = GetComponent<SoundEffectsManager>();
+        footsteps = GetComponent<FootstepsSFX>();
     }
     Vector3 prev, prevrot;
     // Update is called once per frame
@@ -44,6 +46,7 @@ public class Player : MonoBehaviour
         style.normal.textColor = Color.green;
         GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nMIC ACTIVE: {voice.MicrophoneActive}", style);
     }
+    float t;
     void Update()
     {
         
@@ -51,7 +54,18 @@ public class Player : MonoBehaviour
         
         if (!playerInfo.isLocal)
         {  //-----------------------------------------REMOTE CODE------------------------------------------------
+            t += Time.deltaTime;
             Tools.UpdatePos(transform, rb, transforms,this, inputs,5f);
+            if(inputs.isMoving)
+            {
+                float sin;
+                if(inputs.isSprinting)
+                    sin = Mathf.Sin(t * 2) * 0.1f;
+                else
+                    sin = Mathf.Sin(t) * 0.1f;
+
+                if (sin < 0.05) footsteps.PlayStepSound();
+            }
         }
         else
         {  //-----------------------------------------LOCAL CODE-------------------------------------------------

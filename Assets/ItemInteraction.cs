@@ -9,14 +9,7 @@ public class ItemInteraction : MonoBehaviour
     private InventoryManager SelfInventory;
     [SerializeField]
     private float m_maxRaycastDistance = 10;
-    [SerializeField]
-    private float m_translateStrength = 10;
-
-    private Collider currentlyPickedUpCollider;
     public Transform holdPoint;
-    private float t;
-    [SerializeField]
-    private float lerpSpeed = 1;
     public bool remotePickedUp { get; private set; }
     public bool remote;
 

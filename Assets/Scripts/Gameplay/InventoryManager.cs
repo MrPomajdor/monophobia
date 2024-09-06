@@ -5,7 +5,7 @@ using System.Linq;
 using Unity.Burst.Intrinsics;
 using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
-using static UnityEditor.Progress;
+
 
 
 public class InventoryManager : MonoBehaviour

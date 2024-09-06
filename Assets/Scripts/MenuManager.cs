@@ -25,7 +25,7 @@ public class MenuManager : MonoBehaviour
         
 
 
-        ChangeMenu("main");
+        //ChangeMenu("main");
         HideAllPopups();
         conMan = FindObjectOfType<ConnectionManager>(); 
     }
@@ -36,39 +36,36 @@ public class MenuManager : MonoBehaviour
     {
         
     }
-    MenuPage pg=null;
+
     public void ChangeMenu(string nm) //26.02.2024 WHY THE FUCK THIS STOPS FUCKING WORKING OUT OF NOWHERE WHEN I TRY TO ACCESS THE pg VARIABLE GOD DAMMIT
                                       //TODO: Fix this piece of dogshit (ChangeMenu)
+                                      //23.08.2024 turns out calling the function not from the main thread is a problem. Yes it took me this long to realize that
     {
         if(nm == null)
         { Debug.LogError("[MenuManager] ChangeMenu argument can't be null"); return; }
         Debug.Log($"Changing menu to {nm}");
-        //print($"gowno0");
-        pg = GetPage(nm);
-        //print($"gowno1 {nm} found {pg}");
+        MenuPage pg = GetPage(nm);
 
         if (pg != null)
         {
-            //print($"gowno2 {nm}");
             if (pg.type != MenuBlockType.FullScreen)
             {
-                //Debug.LogError("[MenuMamanger] Use ShowPopup to show popups and not ChangeMenu.");
+                Debug.LogError("[MenuMamanger] Use ShowPopup to show popups and not ChangeMenu.");
                 return;
             }
 
-            //print($"gowno3 {nm} {pages.Length} {pages}");
 
-            for (int i = 0; i < pages.Length; i++)
-            {
-                //print($"GOWNO KURWA MAC");
-            }
-            /*foreach (MenuPage page in pages)
+
+            foreach (MenuPage page in pages)
             {
                 if (page.type == MenuBlockType.Popup)
                     continue;
 
-                page.Hide();
-            }*/
+                if(page.Visible) page.Hide();
+            }
+
+
+
             pg.Show();
             pg.ClearInputs();
             //print($"gowno5 {nm}");
@@ -76,16 +73,15 @@ public class MenuManager : MonoBehaviour
         }
         else
             Debug.LogError($"[MenuManager] Page {nm} not found in scene");
+
+        
     }
 
     public MenuPage GetPage(string nm)
     {
-        foreach (MenuPage page in pages)
-        {
-            if(page.menu_name == nm)
-                return page;
-        }
-        return null;
+
+        return pages.FirstOrDefault(x => x.menu_name == nm);
+
     }
 
     public void ShowPopup(string nm)

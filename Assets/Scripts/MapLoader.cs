@@ -25,7 +25,8 @@ public class MapLoader : MonoBehaviour
 
     void Update()
     {
-
+        if(Input.GetKeyDown(KeyCode.F1))
+            ReturnToMenu();
     }
     public void ReturnToMenu()
     {
@@ -33,8 +34,9 @@ public class MapLoader : MonoBehaviour
     }
         
     public void LoadMap(LobbyInfo mapInfo){
+        Debug.Log($"Loading map {mapInfo.mapName}");
         StartCoroutine(LoadMapAsync(mapInfo));
-        Debug.Log("Loading map");
+        
     }
 
     public void UpdateMap(LobbyInfo mapInfo) //WHAT
@@ -83,7 +85,7 @@ public class MapLoader : MonoBehaviour
             {
                 yield return null;
             }
-
+            conMan.clients.Clear();
             mapManager = FindObjectOfType<MapManager>();
             mapManager.mapInfo = mapInfo;
             bool isSelfHost=false;
@@ -106,6 +108,7 @@ public class MapLoader : MonoBehaviour
                 Debug.LogError("No spawn positions present on the map!");
                 yield break;
             }
+            Debug.Log("Creating local player");
             PlayerSpawnPosition r_spawn_pos = spawns[UnityEngine.Random.Range(0, spawns.Length)];
             GameObject local_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
             local_player.name = conMan.client_self.name;
@@ -121,7 +124,9 @@ public class MapLoader : MonoBehaviour
             lcp.voice.Initialize(VoiceManager.Type.Local);
             lcp.voice.mainAudioSource.bypassReverbZones = true;
 
-            
+            //DontDestroyOnLoad(local_player);
+
+
             //WORLD STATE SYNCING
             if (isSelfHost)
             {
@@ -196,6 +201,7 @@ public class MapLoader : MonoBehaviour
                                                            //forgot to update. its working
                                                            //GOD DAMMIT SELF CREATING ISNT WORKING D:
                                                            //and i wanna clarify - i know why this shit isn't working just i dont have the iron will to fix it xd
+        Debug.Log($"Creating player {pl.name} with id {pl.id} ({self})");
         PlayerSpawnPosition[] spawns = FindObjectsOfType<PlayerSpawnPosition>();
         if (spawns.Length == 0)
         {
@@ -238,6 +244,8 @@ public class MapLoader : MonoBehaviour
         {
             conMan.client_self.connectedPlayer = npl;
         }
-        Debug.Log($"Creating player {pl.name} with id {pl.id} ({self})");
+
+        //DontDestroyOnLoad(new_player);
+        
     }
 }

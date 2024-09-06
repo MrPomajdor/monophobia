@@ -5146,6 +5146,104 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 6239881831769578202, guid: dd6fe2e77fd51fc41900aa5246296df2, type: 3}
+--- !u!1001 &1333779138
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.93902665
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 4.135492
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 16.351513
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -2115470879768627661, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e8c1c362588089941826aef1e8509ff8, type: 2}
+    - target: {fileID: -349327056497858981, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e8c1c362588089941826aef1e8509ff8, type: 2}
+    - target: {fileID: 919132149155446097, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_Name
+      value: gas cylinder
+      objectReference: {fileID: 0}
+    - target: {fileID: 5887114594651638629, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e8c1c362588089941826aef1e8509ff8, type: 2}
+    - target: {fileID: 6745407112846214221, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e8c1c362588089941826aef1e8509ff8, type: 2}
+    - target: {fileID: 7053129722500662502, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e8c1c362588089941826aef1e8509ff8, type: 2}
+    - target: {fileID: 7951340422900412476, guid: e7c24b7faf785a7439e01939aaf16a40,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e8c1c362588089941826aef1e8509ff8, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: e7c24b7faf785a7439e01939aaf16a40, type: 3}
 --- !u!1 &1340074813
 GameObject:
   m_ObjectHideFlags: 0
@@ -6073,8 +6171,8 @@ Light:
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 0.6037736, g: 0.6037736, b: 0.6037736, a: 1}
-  m_Intensity: 78415.13
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 130077.24
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -6117,13 +6215,13 @@ Light:
   m_LightShadowCasterMode: 2
   m_AreaSize: {x: 0.5, y: 0.5}
   m_BounceIntensity: 1
-  m_ColorTemperature: 16488
+  m_ColorTemperature: 8884
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
-  m_ShadowAngle: 0
+  m_ShadowAngle: 1.57
 --- !u!4 &1736386285
 Transform:
   m_ObjectHideFlags: 0
@@ -6132,13 +6230,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1736386283}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalRotation: {x: 0.46619433, y: -0.082541585, z: -0.012709252, w: 0.8807316}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 54.993, y: -15.908, z: -9.973}
 --- !u!114 &1736386286
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6151,13 +6249,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a68c43fe1f2a47cfa234b5eeaa98012, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Intensity: 78415.13
+  m_Intensity: 130077.24
   m_EnableSpotReflector: 1
   m_LuxAtDistance: 1
   m_InnerSpotPercent: 0
   m_SpotIESCutoffPercent: 100
   m_LightDimmer: 1
-  m_VolumetricDimmer: 1
+  m_VolumetricDimmer: 1.68
   m_LightUnit: 2
   m_FadeDistance: 10000
   m_VolumetricFadeDistance: 10000
@@ -6181,7 +6279,7 @@ MonoBehaviour:
   m_AreaLightShadowCone: 120
   m_UseScreenSpaceShadows: 0
   m_InteractsWithSky: 1
-  m_AngularDiameter: 0.5
+  m_AngularDiameter: 1.57
   m_FlareSize: 2
   m_FlareTint: {r: 1, g: 1, b: 1, a: 1}
   m_FlareFalloff: 4
@@ -7672,3 +7770,4 @@ SceneRoots:
   - {fileID: 819100825}
   - {fileID: 867867663}
   - {fileID: 1327873231}
+  - {fileID: 1333779138}

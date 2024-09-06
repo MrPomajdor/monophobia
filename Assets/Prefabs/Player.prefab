@@ -1065,9 +1065,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_maxRaycastDistance: 10
-  m_translateStrength: 13
   holdPoint: {fileID: 3338296100986779347}
-  lerpSpeed: 1
   remote: 0
 --- !u!114 &1389488555766624092
 MonoBehaviour:
@@ -1082,7 +1080,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   holdPoint: {fileID: 3338296100986779347}
-  TranslateStrength: 13
+  TranslateStrength: 20
   LerpSpeed: 8
 --- !u!1 &7127683235744842812
 GameObject:
@@ -1103,6 +1101,7 @@ GameObject:
   - component: {fileID: 4334091122782718016}
   - component: {fileID: 5540899609716941165}
   - component: {fileID: 4510345675070292442}
+  - component: {fileID: 6586004410696577797}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1186,17 +1185,6 @@ MonoBehaviour:
   LerpSpeed: 18
   CameraTiltForce: 1
   cam: {fileID: 7127683235722503675}
-  audioSource: {fileID: 7127683236634418116}
-  StepSounds:
-  - {fileID: 8300000, guid: 321c520a51fa94141bf4c8dee5e7e8b5, type: 3}
-  - {fileID: 8300000, guid: 629bcc3138e695541b75cbdcf5fe036e, type: 3}
-  - {fileID: 8300000, guid: cd37646250640054a897878663a4ba5d, type: 3}
-  - {fileID: 8300000, guid: e9dee2427086c3b4da6ee402b33a8d59, type: 3}
-  - {fileID: 8300000, guid: e855bf88b7d19554b9cebd60b01dbd87, type: 3}
-  - {fileID: 8300000, guid: 7d77d83e450f00a46bfc7969bcc6ac01, type: 3}
-  - {fileID: 8300000, guid: 6b4027a566f6a3a49a4136230015ae7a, type: 3}
-  - {fileID: 8300000, guid: 091a5d783099dd44ebe89c41b442f966, type: 3}
-  - {fileID: 8300000, guid: 12a286417541ef742b3f9f4fee25ce39, type: 3}
   moveSpeed: 3
   airSpeed: 0.8
   sprintAdd: 2
@@ -1440,6 +1428,29 @@ MonoBehaviour:
   InventoryGroup: {fileID: 5374469874964258973}
   InventorySlot: {fileID: 4122701660950207993, guid: 5c42172201fcdd24988e40da62d587f9,
     type: 3}
+--- !u!114 &6586004410696577797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7127683235744842812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bae6423ab4d116d4dbaca5258f049ded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  StepSounds:
+  - {fileID: 8300000, guid: 321c520a51fa94141bf4c8dee5e7e8b5, type: 3}
+  - {fileID: 8300000, guid: 629bcc3138e695541b75cbdcf5fe036e, type: 3}
+  - {fileID: 8300000, guid: cd37646250640054a897878663a4ba5d, type: 3}
+  - {fileID: 8300000, guid: e9dee2427086c3b4da6ee402b33a8d59, type: 3}
+  - {fileID: 8300000, guid: e855bf88b7d19554b9cebd60b01dbd87, type: 3}
+  - {fileID: 8300000, guid: 7d77d83e450f00a46bfc7969bcc6ac01, type: 3}
+  - {fileID: 8300000, guid: 6b4027a566f6a3a49a4136230015ae7a, type: 3}
+  - {fileID: 8300000, guid: 091a5d783099dd44ebe89c41b442f966, type: 3}
+  - {fileID: 8300000, guid: 12a286417541ef742b3f9f4fee25ce39, type: 3}
+  audioSource: {fileID: 7127683236634418116}
 --- !u!1 &7127683235911055367
 GameObject:
   m_ObjectHideFlags: 0

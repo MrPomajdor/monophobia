@@ -9,11 +9,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public static class Tools
 {
     public static void UpdatePos(Transform transform, Rigidbody rb, Transforms transforms, Player player = null, Inputs inputs = null, float smoothingFactor = 0.5f)
     {
+        //Debug.Log($"Shit fuck shit lmaoooo {transform.gameObject.name}");
         rb.velocity = transforms.real_velocity;
         rb.velocity += transforms.position - transform.position;
         
@@ -113,7 +115,7 @@ public class ConnectionManager : MonoBehaviour
 
     private void Connect(IPAddress ip, int port = 1338)
     {
-        //menuManager.ChangeMenu("connecting");
+        //
         socket = new TcpClient
         {
             ReceiveBufferSize = 2048,
@@ -167,14 +169,16 @@ public class ConnectionManager : MonoBehaviour
         if (!socket.Connected)
         {
             Debug.Log("Could not connect!");
-            //TODO: Try to connect again.
+            //Try to connect again.
+            //socket.EndConnect(asyncResult);
+            //Disconnect();
             Connect(IPAddress.Parse(_IPAddress));
             return;
         }
         Debug.Log("Connected!");
-
+        
         connected = true;
-        //menuManager.ChangeMenu("main");
+        
         //Debug.Log("Starting watchdog");
 
         //StartCoroutine(watchdog());
@@ -187,6 +191,11 @@ public class ConnectionManager : MonoBehaviour
 
 
         stream.BeginRead(recvBuffer, 0, dataBufferSize, ReceiveCallback, null);
+
+        //if (SceneManager.GetActiveScene().name != "mainmenu")
+        //    SceneManager.LoadScene("mainmenu", LoadSceneMode.Single);
+        ThreadManager.ExecuteOnMainThread(()=>{ menuManager.ChangeMenu("main"); });
+        
     }
 
     private void ReceiveCallback(IAsyncResult asyncResult)
@@ -234,6 +243,10 @@ public class ConnectionManager : MonoBehaviour
     }
     private void Start()
     {
+    }
+    private void OnEnable()
+    {
+        
         if (SteamManager.Initialized)
         {
             Debug.Log($"Steam username: {SteamFriends.GetPersonaName()}");
@@ -263,6 +276,7 @@ public class ConnectionManager : MonoBehaviour
 
 
         client_self.name = $"{SteamFriends.GetPersonaName()}";
+        ThreadManager.ExecuteOnMainThread(() => { menuManager.ChangeMenu("connecting"); });
         Connect(IPAddress.Parse(_IPAddress));
     }
 
@@ -318,6 +332,9 @@ public class ConnectionManager : MonoBehaviour
                 break;
             case var _ when packet.flag[0] == Flags.Response.inventorySwitch[0]:
                 ParseInventorySwitch(packet);
+                break;
+            case var _ when packet.flag[0] == Flags.Response.startMap[0]:
+                RemoteMapStart();
                 break;
         }
         //}catch(Exception e) { Debug.LogError($"{e}"); Debug.Log($"Error parsing packet {packet.header[0]}{packet.header[1]}{packet.flag[0]}{e.StackTrace} "); }
@@ -409,6 +426,13 @@ public class ConnectionManager : MonoBehaviour
     #region Parsing Incoming Packets
 
     #region Non-json Data
+    private void RemoteMapStart()
+    {
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            mapLoader.LoadMap(mapLoader.CurrentMapManager.mapInfo);
+        });
+    }
     private void ParseRejection(Packet packet)
     //friendzone :c
     {
@@ -753,7 +777,7 @@ public class ConnectionManager : MonoBehaviour
 
                 ClientHandle matchingPlayer = clients.FirstOrDefault(x => x.id == player.id); //find the connected local player by id
 
-                if (matchingPlayer != null)
+                if (matchingPlayer != null && matchingPlayer.connectedPlayer != null)
                 {
                     //apply everything
 
@@ -765,6 +789,10 @@ public class ConnectionManager : MonoBehaviour
                     matchingPlayer.connectedPlayer.stats.alcohol = player.stats.alcohol;
 
 
+                }
+                else
+                {
+                    Debug.LogWarning($"Could not find a player with id {player.id}");
                 }
 
             }

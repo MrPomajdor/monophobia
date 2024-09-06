@@ -47,6 +47,7 @@ public static class Flags
         public static byte[] itemPickup = new byte[] { 0xA5 };
         public static byte[] itemDrop = new byte[] { 0xA6 };
         public static byte[] inventorySwitch = new byte[] { 0xA7 };
+        public static byte[] startMap = new byte[] { 0xA8 };
         public static byte[] itemIntInf = new byte[] { 0xA4 };
         public static byte[] voice = new byte[] { 0xAC };
 
@@ -70,6 +71,7 @@ public static class Flags
         public static byte[] itemPickup = new byte[] { 0xC6 };
         public static byte[] itemDrop = new byte[] { 0xC7 };
         public static byte[] inventorySwitch = new byte[] { 0xC8 };
+        public static byte[] startMap = new byte[] { 0xC9 };
 
         public static byte[] playerData = new byte[] { 0xC4 }; //warning: contents explosive
         public static byte[] voice = new byte[] { 0x0C };
@@ -290,7 +292,8 @@ public class PacketParser
         }
         else
         {
-            Debug.LogWarning($"Received message with unknown header ({headerBytes[0]} {headerBytes[1]})");
+            Debug.LogWarning($"Received message with unknown header ({headerBytes[0].ToString("X")} {headerBytes[1].ToString("X")})");
+            
         }
     }
 

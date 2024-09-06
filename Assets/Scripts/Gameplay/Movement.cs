@@ -12,9 +12,6 @@ public class Movement : MonoBehaviour
     public float LerpSpeed = 2f;
     public float CameraTiltForce = 1;
     public Camera cam;
-    [Header("Sounds")]
-    public AudioSource audioSource;
-    public AudioClip[] StepSounds;
     [Header("Moving")]
     public float moveSpeed = 6f;
     float _moveSpeed;
@@ -29,6 +26,8 @@ public class Movement : MonoBehaviour
     public float normalDrag;
     public float airDrag = 3;
     float add;
+
+    private FootstepsSFX footsteps;
     
     public Vector3 MoveDirection {
         get { return moveDirection; }
@@ -64,6 +63,7 @@ public class Movement : MonoBehaviour
     float initialHeight;
     private void Start()
     {
+        footsteps = GetComponent<FootstepsSFX>();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
         normalDrag = drag;
@@ -101,12 +101,11 @@ public class Movement : MonoBehaviour
         else
             isMoving = false;
         rb.drag = drag;
-
         if (isGrounded)
         {
             if (!sw)
             {
-                audioSource.PlayOneShot(StepSounds[Random.Range(0, StepSounds.Length)]);
+                footsteps.PlayStepSound();
                 sw = true;
             }
         }
@@ -225,7 +224,7 @@ public class Movement : MonoBehaviour
                 if (!stepSw)
                 {
                     if (isGrounded)
-                        audioSource.PlayOneShot(StepSounds[Random.Range(0, StepSounds.Length)]); 
+                        footsteps.PlayStepSound();
                     stepSw = true;
                 }
             }
