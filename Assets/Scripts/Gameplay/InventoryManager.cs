@@ -1,37 +1,109 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Unity.Burst.Intrinsics;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
 
 
 
 public class InventoryManager : MonoBehaviour
 {
-    public int InventorySize=5;
-    private ConnectionManager conMan;
+    public int InventorySize = 5;
     public bool Remote = false;
     [field: SerializeField]
     public List<Item> items { get; private set; } = new List<Item>();
     [field: SerializeField]
     public Item current { get; private set; }
     public Camera m_Camera;
+    Player owner;
     [Header("UI")]
     [SerializeField]
     private Transform InventoryGroup;
     [SerializeField]
     private GameObject InventorySlot;
+
     void Start()
     {
-        conMan = FindAnyObjectByType<ConnectionManager>();
     }
+
+
+    private void OnEnable()
+    {
+        owner = GetComponent<Player>();
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.itemDrop[0], ParseItemDrop);
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.itemPickup[0], ParseItemPickup);
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.inventorySwitch[0], ParseInventorySwitch);
+    }
+    private void OnDisable()
+    {
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.itemDrop[0], ParseItemDrop);
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.itemPickup[0], ParseItemPickup);
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.inventorySwitch[0], ParseInventorySwitch);
+
+    }
+
+    public void ParseItemDrop(Packet packet)
+    {
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+            int playerID = reader.ReadInt32();
+            int itemID = reader.ReadInt32();
+
+            if (playerID != owner.playerInfo.id)
+                return;
+
+            if (current.itemStruct.id == itemID)
+                DropCurrent();
+            else
+            {
+                SwitchItemByID(itemID);
+                DropCurrent();
+            }
+        }
+    }
+
+    public void ParseInventorySwitch(Packet packet)
+    {
+
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+            int playerID = reader.ReadInt32();
+            int itemID = reader.ReadInt32();
+
+            if (playerID != owner.playerInfo.id) return;
+
+            SwitchItemByID(itemID);
+        }
+
+    }
+
+    public void ParseItemPickup(Packet packet)
+    {
+
+
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+            int playerID = reader.ReadInt32();
+            int itemID = reader.ReadInt32();
+
+            if (playerID != owner.playerInfo.id) return;
+
+            Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemID);
+            if (itm == null) return;
+
+            PickUpItem(itm);
+            Debug.Log($"Player {playerID} picked up {itemID}");
+        }
+
+    }
+
 
     // Update is called once per frame
     void Update()
     {
-        if(Input.GetAxis("Mouse ScrollWheel") > 0)
+        if (Input.GetAxis("Mouse ScrollWheel") > 0)
             SwitchItem(true);
         else
             SwitchItem(false);
@@ -41,7 +113,7 @@ public class InventoryManager : MonoBehaviour
     //TODO
     public void SwitchItem(bool directon)
     {
-        
+
         UpdateInactive();
         SendItemSelected();
     }
@@ -103,8 +175,8 @@ public class InventoryManager : MonoBehaviour
 
     public void PickUpItem(Item item)
     {
-        if (items.Contains(item) || items.Count>=InventorySize) return;
-        
+        if (items.Contains(item) || items.Count >= InventorySize) return;
+
         items.Add(item);
         item.PickedUp = true;
         if (items.Count == 1)
@@ -119,7 +191,7 @@ public class InventoryManager : MonoBehaviour
 
         SendItemPickup(item);
 
-         
+
     }
 
     /*
@@ -185,7 +257,7 @@ public class InventoryManager : MonoBehaviour
             Destroy(t.gameObject);
         }
 
-        foreach(Item item in items)
+        foreach (Item item in items)
         {
             InventorySlotManager slotManager = Instantiate(InventorySlot, InventoryGroup.transform).GetComponent<InventorySlotManager>();
 
@@ -200,7 +272,7 @@ public class InventoryManager : MonoBehaviour
         packet.header = Headers.data;
         packet.flag = Flags.Post.itemPickup;
         packet.AddToPayload(item.itemStruct.id);
-        packet.Send(conMan.stream);
+        packet.Send(Global.connectionManager.stream);
     }
 
 
@@ -211,18 +283,18 @@ public class InventoryManager : MonoBehaviour
         packet.header = Headers.data;
         packet.flag = Flags.Post.itemDrop;
         packet.AddToPayload(item.itemStruct.id);
-        packet.Send(conMan.stream);
+        packet.Send(Global.connectionManager.stream);
     }
 
     private void SendItemSelected()
     {
         if (Remote) return;
-        if(current == null) return;
+        if (current == null) return;
 
         Packet packet = new Packet();
         packet.header = Headers.data;
         packet.flag = Flags.Post.inventorySwitch;
         packet.AddToPayload(current.itemStruct.id);
-        packet.Send(conMan.stream);
+        packet.Send(Global.connectionManager.stream);
     }
 }

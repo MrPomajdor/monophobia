@@ -254,6 +254,7 @@ public class Packet
 public class PacketParser
 {
     private Dictionary<byte[], Action<Packet>> headerProcessors = new Dictionary<byte[], Action<Packet>>(new ByteArrayComparer());
+
     //private Dictionary<byte[], Action<Packet>> UDPheaderProcessors = new Dictionary<byte[], Action<Packet>>(new ByteArrayComparer());
 
     public static byte[] AssembleMessage(byte[] header, byte[] flag, byte[] payload)

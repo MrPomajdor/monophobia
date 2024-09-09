@@ -9,7 +9,6 @@ public class Player : MonoBehaviour
     public Camera cam { get; private set; }
     public MouseRotation mouseRotation;
     public Movement movement;
-    ConnectionManager conMan;
     [field: SerializeField]
     public Rigidbody rb { get; private set; }
     [field: SerializeField]
@@ -27,7 +26,6 @@ public class Player : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        conMan = FindObjectOfType<ConnectionManager>();
         stats = GetComponent<Stats>();
         sfxManager = GetComponent<SoundEffectsManager>();
         footsteps = GetComponent<FootstepsSFX>();
@@ -44,9 +42,41 @@ public class Player : MonoBehaviour
 
         style.fontSize = 30;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {conMan.client_self.name}\nServer ip: {conMan._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nMIC ACTIVE: {voice.MicrophoneActive}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {Global.connectionManager.client_self.name}\nServer ip: {Global.connectionManager._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nMIC ACTIVE: {voice.MicrophoneActive}", style);
     }
     float t;
+
+    private void OnEnable()
+    {
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.transformData[0], ParseTransformData);
+    }
+    private void OnDisable()
+    {
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.transformData[0], ParseTransformData);
+    }
+
+    public void ParseTransformData(Packet packet)
+    {
+        PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
+        foreach (PlayerData player in json_.players) // for each player in recieved json
+        {
+
+            if (player.id == Global.connectionManager.client_self.id)
+                continue;
+            if(player.id == playerInfo.id)
+            {
+                transforms = player.transforms;
+                lastTime = Time.realtimeSinceStartup;
+                movement.col.height = player.inputs.isCrouching ? 0.8f : 2f;
+                inputs = player.inputs;
+                stats.sanity = player.stats.sanity;
+                stats.alcohol = player.stats.alcohol;
+                break;
+            }
+        }
+    }
+
+
     void Update()
     {
         
@@ -77,7 +107,7 @@ public class Player : MonoBehaviour
             //periodic position sending
             if (lt2 > 0.15f)
             {
-                conMan.SendPlayerLocationInfo(this);
+                SendPlayerLocationInfo();
                 lt2 = 0;
             }
 
@@ -86,7 +116,23 @@ public class Player : MonoBehaviour
         }
     }
 
+    public void SendPlayerLocationInfo()
+    {
+        Transforms transforms_ = transforms;
+        transforms_.rotation = movement.GetAngles();
 
+        PlayerData playerData = new PlayerData();
+        playerData.inputs = inputs;
+        playerData.id = playerInfo.id;
+        playerData.transforms = transforms_;
+
+        string mes = JsonUtility.ToJson(playerData);
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Post.playerTransformData;
+        packet.AddToPayload(mes);
+        packet.Send(Global.connectionManager.udp_handler.client, Global.connectionManager.udp_handler.remoteEndPoint);
+    }
 
 
 }

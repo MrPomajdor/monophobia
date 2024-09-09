@@ -2538,7 +2538,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &449592916
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3998,7 +3998,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &956405030
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4547,7 +4547,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1019152458
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4810,7 +4810,8 @@ MonoBehaviour:
         max_voice_distance: 0
       players: []
   clients: []
-  lobbyManager: {fileID: 1741867137}
+  lobbyManager: {fileID: 0}
+  players: []
 --- !u!4 &1090690892
 Transform:
   m_ObjectHideFlags: 0
@@ -7147,7 +7148,6 @@ GameObject:
   - component: {fileID: 1741867135}
   - component: {fileID: 1741867134}
   - component: {fileID: 1741867136}
-  - component: {fileID: 1741867137}
   m_Layer: 5
   m_Name: LobbyList
   m_TagString: Untagged
@@ -7239,22 +7239,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 1
   m_ChildScaleHeight: 1
   m_ReverseArrangement: 0
---- !u!114 &1741867137
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1741867132}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e60dd4df90afd254db6b6fda81fe3f59, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  LobbyPrefab: {fileID: 3035565536148640343, guid: c7ffce3ad47ad6e479be79d7ee93c38d,
-    type: 3}
-  EmptyPrefab: {fileID: 1334932025259341392, guid: ae54b925f8fd1c047aeae8db2d8821be,
-    type: 3}
 --- !u!1 &1749528615
 GameObject:
   m_ObjectHideFlags: 0
@@ -8406,6 +8390,7 @@ GameObject:
   - component: {fileID: 1917964961}
   - component: {fileID: 1917964965}
   - component: {fileID: 1917964966}
+  - component: {fileID: 1917964967}
   m_Layer: 5
   m_Name: UI Canvas
   m_TagString: Untagged
@@ -8536,6 +8521,23 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1917964967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1917964960}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e60dd4df90afd254db6b6fda81fe3f59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  LobbyPrefab: {fileID: 3035565536148640343, guid: c7ffce3ad47ad6e479be79d7ee93c38d,
+    type: 3}
+  EmptyPrefab: {fileID: 1334932025259341392, guid: ae54b925f8fd1c047aeae8db2d8821be,
+    type: 3}
+  lobbyList: {fileID: 1741867133}
 --- !u!1 &1925014061
 GameObject:
   m_ObjectHideFlags: 0
@@ -8862,7 +8864,7 @@ PrefabInstance:
     - target: {fileID: 1334932025259341399, guid: ae54b925f8fd1c047aeae8db2d8821be,
         type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1334932025259341399, guid: ae54b925f8fd1c047aeae8db2d8821be,
         type: 3}
@@ -8872,7 +8874,7 @@ PrefabInstance:
     - target: {fileID: 1334932025259341399, guid: ae54b925f8fd1c047aeae8db2d8821be,
         type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1334932025259341399, guid: ae54b925f8fd1c047aeae8db2d8821be,
         type: 3}
@@ -8922,12 +8924,12 @@ PrefabInstance:
     - target: {fileID: 1334932025259341399, guid: ae54b925f8fd1c047aeae8db2d8821be,
         type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 299.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1334932025259341399, guid: ae54b925f8fd1c047aeae8db2d8821be,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -27.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1334932025259341399, guid: ae54b925f8fd1c047aeae8db2d8821be,
         type: 3}

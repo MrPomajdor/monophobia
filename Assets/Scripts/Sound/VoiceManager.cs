@@ -2,8 +2,10 @@ using POpusCodec;
 using POpusCodec.Enums;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Unity.Burst.Intrinsics;
+using UnityEditor.PackageManager;
 using UnityEngine;
 public class VoiceManager : MonoBehaviour
 {
@@ -50,12 +52,49 @@ public class VoiceManager : MonoBehaviour
     public bool MicrophoneActive { get { return se || falloffHold; }  }
 
     public bool playLocally { get; set; }
-    public ConnectionManager conMan { get; private set; }
+
 
     [field: SerializeField]
     public int micBufferSize { get; private set; }
     [field: SerializeField]
     public int receiveBufferSize { get; private set; }
+
+
+    private void OnEnable()
+    {
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.voice[0], ParseVoiceData);   
+    }
+
+    private void ParseVoiceData(Packet packet)
+    {
+        int player_id = -1;
+        byte[] _pay;
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+
+            player_id = reader.ReadInt32();
+            int pay_len = reader.ReadInt32();
+            _pay = reader.ReadBytes(pay_len);
+        }
+        if (player_id == Global.connectionManager.client_self.id)
+            return;
+        ThreadManager.ExecuteOnMainThread(() =>
+        {
+            ClientHandle cl = Global.connectionManager.clients.FirstOrDefault(x => x.id == player_id);
+
+            if (cl != null)
+            {
+                cl.connectedPlayer.voice.ReceiveData(_pay);
+                Debug.Log($"Recieved voice packet for {cl.id}/{cl.name}");
+            }
+        });
+
+    }
+
+
+
+
     public static float CalculateAverageVolume(float[] pcmData)
     {
         if (pcmData == null || pcmData.Length == 0 || pcmData.Length % 2 != 0)
@@ -79,7 +118,6 @@ public class VoiceManager : MonoBehaviour
 
     public void Initialize(Type type)
     {
-        conMan = FindObjectOfType<ConnectionManager>();
         _type = type;
         string x = _type==Type.Local ? "Local" : "Remote";
         Debug.Log($"{x} voice inializing....");
@@ -213,8 +251,6 @@ public class VoiceManager : MonoBehaviour
     }
     public void ReceiveData(byte[] encodedData)
     {
-
-        // the data would need to be sent over the network, we just decode it now to test the result
         receiveBuffer.AddRange(decoder.DecodePacketFloat(encodedData));
     }
 
@@ -226,7 +262,7 @@ public class VoiceManager : MonoBehaviour
             while (micBuffer.Count > frameSize)
             {
                 byte[] encodedData = encoder.Encode(micBuffer.GetRange(0, frameSize).ToArray());
-                conMan.SendVoiceData(encodedData);
+                Global.connectionManager.SendVoiceData(encodedData);
                 if (playLocally) ReceiveData(encodedData);
                 micBuffer.RemoveRange(0, frameSize);
             }

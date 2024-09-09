@@ -7,14 +7,22 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+public static class Global
+{
+    public static ConnectionManager connectionManager;
+    
+}
 public static class Tools
 {
     public static void UpdatePos(Transform transform, Rigidbody rb, Transforms transforms, Player player = null, Inputs inputs = null, float smoothingFactor = 0.5f)
     {
+        
         //Debug.Log($"Shit fuck shit lmaoooo {transform.gameObject.name}");
         rb.velocity = transforms.real_velocity;
         rb.velocity += transforms.position - transform.position;
@@ -38,6 +46,7 @@ public class WorldState
     public List<ItemStruct> items = new List<ItemStruct>();
     //TODO: Add mobs
 }
+
 public class ConnectionManager : MonoBehaviour
 {
 
@@ -56,12 +65,33 @@ public class ConnectionManager : MonoBehaviour
     [SerializeField]
     public List<ClientHandle> clients = new List<ClientHandle>();
     public UI_LobbyManager lobbyManager;
-    private PlayerInfo[] players;
+    public PlayerInfo[] players;
     private event Action mainThreadQueuedCallbacks;
     private event Action eventsClone;
     public UDPHandler udp_handler { get; private set; }
     private MenuManager menuManager;
     private MapLoader mapLoader;
+
+    [SerializeField]
+    private Dictionary<byte, List<Action<Packet>>> ReceiversMap = new Dictionary<byte, List<Action<Packet>>>(); //looks wierd xd
+    
+    public void RegisterFlagReceiver(byte flag,Action<Packet> action)
+    {
+        //Debug.Log($"Registering action for flag {flag.ToString("X")} ");
+        if (ReceiversMap.ContainsKey(flag))
+            ReceiversMap[flag].Add(action);
+        else
+        {
+            ReceiversMap.Add(flag, new List<Action<Packet>>());
+            ReceiversMap[flag].Add(action);
+        }
+    }
+    public void UnregisterFlagReceiver(byte flag, Action<Packet> action)
+    {
+        if(ReceiversMap.ContainsKey(flag))
+            if(ReceiversMap[flag].Contains(action))
+                ReceiversMap[flag].Remove(action);
+    }
 
     public bool IsSelfHost
     {
@@ -241,10 +271,13 @@ public class ConnectionManager : MonoBehaviour
     {
 
     }
-    private void Start()
-    {
-    }
+
     private void OnEnable()
+    {
+        Global.connectionManager = this;
+    }
+
+    private void Start()
     {
         
         if (SteamManager.Initialized)
@@ -274,6 +307,8 @@ public class ConnectionManager : MonoBehaviour
         parser.RegisterHeaderProcessor(Headers.rejected, ParseRejection);
         parser.RegisterHeaderProcessor(Headers.disconnecting, ParseDisconnect);
 
+        RegisterFlagReceiver(Flags.Response.idAssign[0], ParseIDAssign);
+        RegisterFlagReceiver(Flags.Response.lobbyListChanged[0], RequestLobbyList);
 
         client_self.name = $"{SteamFriends.GetPersonaName()}";
         ThreadManager.ExecuteOnMainThread(() => { menuManager.ChangeMenu("connecting"); });
@@ -289,55 +324,72 @@ public class ConnectionManager : MonoBehaviour
 
     private void ParseData(Packet packet)
     {
+
+        List<Action<Packet>> actions;
+        if (ReceiversMap.TryGetValue(packet.flag[0],out actions))
+        {
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                foreach (Action<Packet> action in actions) { action.Invoke(packet); }
+
+            });
+        }
+        else
+        {
+            Debug.LogWarning($"Receiver not found for flag {packet.flag[0].ToString("X")}");
+        }
+
+        /*
         //try
         //{  //TODO: handle all errors for ParseData() inside - do not fucking use a try catch
         switch (packet.flag[0])
         {
             case var _ when packet.flag[0] == Flags.Response.idAssign[0]:
-                ParseIDAssign(packet);
+                ParseIDAssign(packet); done 
                 break;
             case var _ when packet.flag[0] == Flags.Response.playerList[0]:
-                ParsePlayerList(packet);
+                ParsePlayerList(packet); ? 
                 break;
             case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
-                ParseLobbyList(packet);
+                ParseLobbyList(packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.voice[0]:
-                ParseVoiceData(packet);
+                ParseVoiceData(packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.lobbyListChanged[0]:
-                RequestLobbyList();
+                RequestLobbyList(); done
                 break;
             //-----------------------------JSON DATA-----------------------------
             case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
-                ParseLobbyInfo(packet);
+                ParseLobbyInfo(packet);  done
                 break;
             case var _ when packet.flag[0] == Flags.Response.transformData[0]: //That also syncs up the stats
-                ParseTransformData(packet);
+                ParseTransformData(packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.worldState[0]:
-                ParseWorldStateData(packet);
+                ParseWorldStateData(packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.itemData[0]:
-                ParseItemPosition(packet);
+                ParseItemPosition(packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.itemIntInf[0]:
-                ParseItemInteractionInfo(packet);
+                ParseItemInteractionInfo(packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.itemDrop[0]:
-                ParseItemDrop(packet);
+                ParseItemDrop(packet); done 
                 break;
             case var _ when packet.flag[0] == Flags.Response.itemPickup[0]:
-                ParseItemPickup (packet);
+                ParseItemPickup (packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.inventorySwitch[0]:
-                ParseInventorySwitch(packet);
+                ParseInventorySwitch(packet); done
                 break;
             case var _ when packet.flag[0] == Flags.Response.startMap[0]:
-                RemoteMapStart();
+                RemoteMapStart(); 
                 break;
         }
         //}catch(Exception e) { Debug.LogError($"{e}"); Debug.Log($"Error parsing packet {packet.header[0]}{packet.header[1]}{packet.flag[0]}{e.StackTrace} "); }
+        */
     }
     #region Assembling and Sending Packets
     public void JoinLobby(int id, string password = "")
@@ -426,13 +478,7 @@ public class ConnectionManager : MonoBehaviour
     #region Parsing Incoming Packets
 
     #region Non-json Data
-    private void RemoteMapStart()
-    {
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-            mapLoader.LoadMap(mapLoader.CurrentMapManager.mapInfo);
-        });
-    }
+
     private void ParseRejection(Packet packet)
     //friendzone :c
     {
@@ -457,32 +503,7 @@ public class ConnectionManager : MonoBehaviour
             Debug.LogError($"REMOTE ERROR: {error}");
         }
     }
-    private void ParseVoiceData(Packet packet)
-    {
-        int player_id = -1;
-        byte[] _pay;
-        using (MemoryStream _stream = new MemoryStream(packet.payload))
-        using (BinaryReader reader = new BinaryReader(_stream))
-        {
 
-            player_id = reader.ReadInt32();
-            int pay_len = reader.ReadInt32();
-            _pay = reader.ReadBytes(pay_len);
-        }
-        if (player_id == client_self.id)
-            return;
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-            ClientHandle cl = clients.FirstOrDefault(x => x.id == player_id);
-
-            if (cl != null)
-            {
-                cl.connectedPlayer.voice.ReceiveData(_pay);
-                Debug.Log($"Recieved voice packet for {cl.id}/{cl.name}");
-            }
-        });
-
-    }
     public void RequestWorldState()
     {
         if (client_self.connectedPlayer.playerInfo.isHost)
@@ -496,7 +517,7 @@ public class ConnectionManager : MonoBehaviour
         packet.flag = Flags.Request.worldState;
         packet.Send(stream);
     }
-    private void RequestLobbyList()
+    private void RequestLobbyList(Packet packet)
     {
         if (client_self.lobbyInfo == null)
             return;
@@ -506,35 +527,8 @@ public class ConnectionManager : MonoBehaviour
         lobby_list_request.flag = Flags.Request.lobbyList;
         lobby_list_request.Send(stream);
     }
-    private void ParseLobbyList(Packet packet)
-    {
 
-        using (MemoryStream _stream = new MemoryStream(packet.payload))
-        using (BinaryReader reader = new BinaryReader(_stream))
-        {
-            int amount = reader.ReadInt32();
-            Debug.Log($"Lobby amount: {amount}");
-            lobbyManager.Clear();
-            if (amount < 1)
-            {
-                lobbyManager.IndicateNoLobbies();
-                return;
-            }
-            for (int i = 0; i < amount; i++)
-            {
 
-                int lobby_id = reader.ReadInt32();
-                int stringLength = reader.ReadInt32();
-                byte[] stringData = reader.ReadBytes(stringLength);
-                string lobbyName = Encoding.UTF8.GetString(stringData);
-                bool protected_ = reader.ReadBoolean();
-                int current_players = reader.ReadInt32();
-                int max_players = reader.ReadInt32();
-                Debug.Log($"Lobby {i} name: {lobbyName}");
-                lobbyManager.AddLobbyToUI(lobby_id, lobbyName, max_players, current_players, protected_, this);
-            }
-        }
-    }
 
 
     private void ParseIDAssign(Packet packet)
@@ -568,87 +562,10 @@ public class ConnectionManager : MonoBehaviour
         }
     }
 
-    private void ParseItemPickup(Packet packet)
-    {
 
 
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
+ 
 
-            using (MemoryStream _stream = new MemoryStream(packet.payload))
-            using (BinaryReader reader = new BinaryReader(_stream))
-            {
-                int playerID = reader.ReadInt32();
-                int itemID = reader.ReadInt32();
-                Debug.Log($"Player {playerID} picked up {itemID}");
-                ClientHandle pl = clients.FirstOrDefault(x => x.id == playerID);
-                Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemID);
-
-                if (itm==null || pl==null) return;
-
-                pl.connectedPlayer.GetComponent<InventoryManager>().PickUpItem(itm);
-            }
-
-        });
-
-    }
-
-
-    private void ParseItemDrop(Packet packet) 
-    {
-
-
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-
-            using (MemoryStream _stream = new MemoryStream(packet.payload))
-            using (BinaryReader reader = new BinaryReader(_stream))
-            {
-                int playerID = reader.ReadInt32();
-                int itemID = reader.ReadInt32();
-
-
-                ClientHandle pl = clients.FirstOrDefault(x => x.id == playerID);
-
-                if (pl == null) return;
-
-                InventoryManager invMan = pl.connectedPlayer.GetComponent<InventoryManager>();
-                if (invMan.current.itemStruct.id == itemID)
-                    invMan.DropCurrent();
-                else
-                {
-                    invMan.SwitchItemByID(itemID);
-                    invMan.DropCurrent();
-                }
-            }
-
-        });
-
-    }
-    private void ParseInventorySwitch(Packet packet)
-    {
-
-
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-
-            using (MemoryStream _stream = new MemoryStream(packet.payload))
-            using (BinaryReader reader = new BinaryReader(_stream))
-            {
-                int playerID = reader.ReadInt32();
-                int itemID = reader.ReadInt32();
-
-                ClientHandle pl = clients.FirstOrDefault(x => x.id == playerID);
-               
-
-                if (pl == null) return;
-
-                pl.connectedPlayer.GetComponent<InventoryManager>().SwitchItemByID(itemID);
-            }
-
-        });
-
-    }
     private void ParseDisconnect(Packet packet)
     {
         Debug.Log("Disconnected by server!");
@@ -676,7 +593,7 @@ public class ConnectionManager : MonoBehaviour
         hello.AddToPayload(client_self.name); //TODO: Set up player name choosing system (add to packets!!!)
         hello.Send(stream);
 
-        RequestLobbyList();
+        RequestLobbyList(packet);
     }
     #endregion
 
@@ -694,114 +611,8 @@ public class ConnectionManager : MonoBehaviour
 
         });
     }
-    private void ParseItemPosition(Packet packet)
-    {
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-            ItemPosData itemPosData = packet.GetJson<ItemPosData>();
-            if (itemPosData == null)
-                return;
-
-            Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemPosData.id);
-            if (itm == null)
-                return;
-            if (itm.PickedUp)
-                return;
-
-            itm.itemStruct.transforms = itemPosData.transforms;
 
 
-
-        });
-    }
-
-    private void ParseItemInteractionInfo(Packet packet)
-    {
-
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-            ItemInteractionInfo itemIntInf = packet.GetJson<ItemInteractionInfo>();
-            if (itemIntInf == null)
-                return;
-
-            Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemIntInf.itemID);
-            if (itm == null)
-                return;
-
-
-
-            itm.interactionInfo = itemIntInf;
-        });
-    }
-
-
-
-    private void ParseLobbyInfo(Packet packet)
-    {
-        Debug.Log("Got lobby info");
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-            LobbyInfo lobbyInfo = packet.GetJson<LobbyInfo>();
-            client_self.lobbyInfo = lobbyInfo;
-            if (lobbyInfo == null)
-                return;
-            if (FindObjectOfType<MapLoader>().lobbyLoading) //I HATE MYSELF (jk)
-                return;                                     //TODO: do something with this shitty ass hack
-
-            if (FindObjectOfType<MapLoader>().CurrentMapManager == null)
-            {
-                FindObjectOfType<MapLoader>().LoadMap(lobbyInfo);
-            }
-            else
-                FindObjectOfType<MapLoader>().UpdateMap(lobbyInfo);
-
-            players = lobbyInfo.players;
-        });
-
-
-    }
-
-    private void ParseTransformData(Packet packet) //TODO: ParseTransformData also syncs up the stats (should break it up in the future)
-    {
-
-
-        ThreadManager.ExecuteOnMainThread(() =>
-        {
-
-            PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
-            foreach (PlayerData player in json_.players) // for each player in recieved json
-            {
-
-                if (player.id == client_self.id)
-                    continue;
-
-                ClientHandle matchingPlayer = clients.FirstOrDefault(x => x.id == player.id); //find the connected local player by id
-
-                if (matchingPlayer != null && matchingPlayer.connectedPlayer != null)
-                {
-                    //apply everything
-
-                    matchingPlayer.connectedPlayer.transforms = player.transforms;
-                    matchingPlayer.connectedPlayer.lastTime = Time.realtimeSinceStartup;
-                    matchingPlayer.connectedPlayer.movement.col.height = player.inputs.isCrouching ? 0.8f : 2f;
-                    matchingPlayer.connectedPlayer.inputs = player.inputs;
-                    matchingPlayer.connectedPlayer.stats.sanity = player.stats.sanity;
-                    matchingPlayer.connectedPlayer.stats.alcohol = player.stats.alcohol;
-
-
-                }
-                else
-                {
-                    Debug.LogWarning($"Could not find a player with id {player.id}");
-                }
-
-            }
-        });
-
-    }
-
-
-    
     #endregion
 
     #endregion

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.Progress;
 
 public enum ItemType
 {
@@ -10,7 +11,6 @@ public class Item : MonoBehaviour
 {
     public static List<int> otherItems = new List<int>();
     public ItemType type;
-    private ConnectionManager conMan;
     public ItemStruct itemStruct;
     public Sprite thumbnail;
     public Tooltip tooltip;
@@ -26,13 +26,43 @@ public class Item : MonoBehaviour
     public bool Moved { get; private set; }
 
     public bool PickedUp = false;
+
+    private void OnEnable()
+    {
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.itemData[0], ParseItemTransform);
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.itemIntInf[0], ParseItemInteraction);
+    }
+
+    private void OnDisable()
+    {
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.itemData[0], ParseItemTransform);
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.itemIntInf[0], ParseItemInteraction);
+
+    }
+
+    public void ParseItemTransform(Packet packet)
+    {
+        ItemPosData itemPosData = packet.GetJson<ItemPosData>();
+        if (itemPosData == null)
+            return;
+
+        if(itemPosData.id == itemStruct.id)
+            itemStruct.transforms = itemPosData.transforms;
+    }
+
+    public void ParseItemInteraction(Packet packet)
+    {
+        ItemInteractionInfo inf = packet.GetJson<ItemInteractionInfo>();
+        if (inf == null)
+            return;
+
+        if (inf.itemID == itemStruct.id)
+            interactionInfo = inf;
+    }
     void Start()
     {
-        conMan = FindAnyObjectByType<ConnectionManager>();
         rb = GetComponent<Rigidbody>();
-        if (conMan == null)
-            return;
-        if (conMan.IsSelfHost)
+        if (Global.connectionManager.IsSelfHost)
         {
             //if we are the host, set an id
             itemStruct.id = otherItems.Count;
@@ -54,14 +84,14 @@ public class Item : MonoBehaviour
     }
     public void UpdateInteractionNetwork()
     {
-        conMan.SendItemInteractionInfo(interactionInfo);
+        Global.connectionManager.SendItemInteractionInfo(interactionInfo);
     }
 
     void Update()
     {
-        if (conMan.client_self.connectedPlayer == null) return;
+        if (Global.connectionManager.client_self.connectedPlayer == null) return;
 
-        if (conMan.IsSelfHost)
+        if (Global.connectionManager.IsSelfHost)
         {
             if (rb.velocity.magnitude > 0.1f)
                 Moved = true;
@@ -80,7 +110,7 @@ public class Item : MonoBehaviour
                 itemStruct.transforms.real_velocity = rb.velocity;
                 //lastNetworkLocation = transform.position;
 
-                conMan.SendItemLocationInfo(this);
+                Global.connectionManager.SendItemLocationInfo(this);
 
             }
             else

@@ -1,7 +1,5 @@
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -9,47 +7,96 @@ using UnityEngine.SceneManagement;
 public class MapLoader : MonoBehaviour
 {
     public GameObject PlayerPrefab;
-    ConnectionManager conMan;
+
     public bool lobbyLoading; //oh god no
-    public MapManager CurrentMapManager 
-    { 
+    public MapManager CurrentMapManager
+    {
         get { return mapManager; }
     }
 
     private MapManager mapManager;
+
+    public void ParseWorldStateData(Packet packet)
+    {
+        WorldState wS = packet.GetJson<WorldState>();
+        if (wS == null)
+            return;
+
+        UpdateWorldState(wS);
+    }
+    private void ParseLobbyInfo(Packet packet)
+    {
+        Debug.Log("Got lobby info");
+
+        LobbyInfo lobbyInfo = packet.GetJson<LobbyInfo>();
+        Global.connectionManager.client_self.lobbyInfo = lobbyInfo;
+        if (lobbyInfo == null)
+            return;
+        if (lobbyLoading) //I HATE MYSELF (jk)
+            return;                                     //TODO: do something with this shitty ass hack
+        Global.connectionManager.players = lobbyInfo.players;
+
+        if (CurrentMapManager == null)
+        {
+            LoadMap(lobbyInfo);
+        }
+        else
+            UpdateMap(lobbyInfo);
+
+
+
+
+
+    }
+    private void OnEnable()
+    {
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.lobbyInfo[0], ParseLobbyInfo);
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.worldState[0], ParseWorldStateData);
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.startMap[0], RemoteMapStart);
+    }
+    private void OnDisable()
+    {
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.lobbyInfo[0], ParseLobbyInfo);
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.worldState[0], ParseWorldStateData);
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.startMap[0], RemoteMapStart);
+    }
     void Start()
     {
         DontDestroyOnLoad(this);
-        conMan = FindObjectOfType<ConnectionManager>();
+
     }
 
     void Update()
     {
-        if(Input.GetKeyDown(KeyCode.F1))
+        if (Input.GetKeyDown(KeyCode.F1))
             ReturnToMenu();
     }
     public void ReturnToMenu()
     {
         SceneManager.LoadScene("mainmenu", LoadSceneMode.Single);
     }
-        
-    public void LoadMap(LobbyInfo mapInfo){
+
+    public void LoadMap(LobbyInfo mapInfo)
+    {
         Debug.Log($"Loading map {mapInfo.mapName}");
         StartCoroutine(LoadMapAsync(mapInfo));
-        
-    }
 
+    }
+    public void RemoteMapStart(Packet packet)
+    {
+        LoadMap(CurrentMapManager.mapInfo);
+    }
     public void UpdateMap(LobbyInfo mapInfo) //WHAT
                                              //TODO: Detect when lobby owner changes and change it localy
     {
         Debug.Log("Updating map------------------------");
-        Debug.Log(conMan.clients.Count);
+        Debug.Log(Global.connectionManager.clients.Count);
         foreach (PlayerInfo client in CurrentMapManager.mapInfo.players)
         {
             if (mapInfo.players.FirstOrDefault(x => (x.name == client.name && x.id == client.id)) == null)
             {
-                GameObject xd = conMan.clients.FirstOrDefault(x => x.id == client.id).connectedPlayer.transform.root.gameObject;
-                conMan.clients.Remove(conMan.clients.FirstOrDefault(x =>  x.id == client.id));
+                GameObject xd = Global.connectionManager.clients.FirstOrDefault(x => x.id == client.id).connectedPlayer.transform.root.gameObject;
+                Global.connectionManager.clients.Remove(Global.connectionManager.clients.FirstOrDefault(x => x.id == client.id));
                 Destroy(xd);
 
                 Debug.Log($"Player {client.name}/{client.id} has left the lobby");
@@ -69,14 +116,14 @@ public class MapLoader : MonoBehaviour
 
         CurrentMapManager.mapInfo = mapInfo;
 
-        
+
     }
 
     private IEnumerator LoadMapAsync(LobbyInfo mapInfo) //TODO: 23.01.2024 Configure the MapManager, and make the LoadMapAsync apply values from MapInfo object
     {
         lobbyLoading = true; //god please please no why 
         ConnectionManager conMan = FindObjectOfType<ConnectionManager>();
-        conMan.worldState = new WorldState();
+        Global.connectionManager.worldState = new WorldState();
         string name = mapInfo.mapName;
         if (Application.CanStreamedLevelBeLoaded(name))
         {
@@ -85,18 +132,18 @@ public class MapLoader : MonoBehaviour
             {
                 yield return null;
             }
-            conMan.clients.Clear();
+            Global.connectionManager.clients.Clear();
             mapManager = FindObjectOfType<MapManager>();
             mapManager.mapInfo = mapInfo;
-            bool isSelfHost=false;
+            bool isSelfHost = false;
             foreach (PlayerInfo pl in mapInfo.players)
             {
-                if (pl.id != conMan.client_self.id) //check if player is local
+                if (pl.id != Global.connectionManager.client_self.id) //check if player is local
                     CreatePlayer(pl); //remote player creation
                 else
                 {
                     isSelfHost = pl.isHost;
-                    
+
                 }
             }
             //TODO: make soimething to save settings and ever choose them.
@@ -111,16 +158,16 @@ public class MapLoader : MonoBehaviour
             Debug.Log("Creating local player");
             PlayerSpawnPosition r_spawn_pos = spawns[UnityEngine.Random.Range(0, spawns.Length)];
             GameObject local_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
-            local_player.name = conMan.client_self.name;
+            local_player.name = Global.connectionManager.client_self.name;
             Player lcp = local_player.GetComponent<Player>();
             lcp.playerInfo.isLocal = true;
-            lcp.playerInfo.id = conMan.client_self.id;
-            lcp.playerInfo.name = conMan.client_self.name;
+            lcp.playerInfo.id = Global.connectionManager.client_self.id;
+            lcp.playerInfo.name = Global.connectionManager.client_self.name;
             lcp.playerInfo.isHost = isSelfHost;
 
-            if (conMan.client_self == null)
-                conMan.client_self = new ClientHandle();
-            conMan.client_self.connectedPlayer = lcp;
+            if (Global.connectionManager.client_self == null)
+                Global.connectionManager.client_self = new ClientHandle();
+            Global.connectionManager.client_self.connectedPlayer = lcp;
             lcp.voice.Initialize(VoiceManager.Type.Local);
             lcp.voice.mainAudioSource.bypassReverbZones = true;
 
@@ -130,20 +177,20 @@ public class MapLoader : MonoBehaviour
             //WORLD STATE SYNCING
             if (isSelfHost)
             {
-                conMan.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
-                foreach (Item item in conMan.items)
+                Global.connectionManager.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
+                foreach (Item item in Global.connectionManager.items)
                 {
-                    conMan.worldState.items.Add(item.itemStruct);
+                    Global.connectionManager.worldState.items.Add(item.itemStruct);
                 }
-                conMan.SendWorldState();
+                Global.connectionManager.SendWorldState();
             }
             else
             {
-                foreach(Item item in FindObjectsByType<Item>(FindObjectsSortMode.None))
+                foreach (Item item in FindObjectsByType<Item>(FindObjectsSortMode.None))
                 {
                     Destroy(item.gameObject);
                 }
-                conMan.RequestWorldState();
+                Global.connectionManager.RequestWorldState();
             }
 
 
@@ -158,14 +205,16 @@ public class MapLoader : MonoBehaviour
         }
         lobbyLoading = false; //GOD DAMMIT
     }
+
+
     public void UpdateWorldState(WorldState newWorldState)
     {
         Debug.Log("World state update!");
-        if (conMan.worldState.Equals(newWorldState))
+        if (Global.connectionManager.worldState.Equals(newWorldState))
             return;
 
-        ItemStruct[] itemsToRemove = conMan.worldState.items.Except(newWorldState.items).ToArray();
-        ItemStruct[] newItems = newWorldState.items.Except(conMan.worldState.items).ToArray();
+        ItemStruct[] itemsToRemove = Global.connectionManager.worldState.items.Except(newWorldState.items).ToArray();
+        ItemStruct[] newItems = newWorldState.items.Except(Global.connectionManager.worldState.items).ToArray();
         Item[] itemsLoaded = FindObjectsByType<Item>(FindObjectsSortMode.None);
         if (itemsToRemove.Length > 0)
             foreach (ItemStruct item in itemsToRemove)
@@ -187,14 +236,14 @@ public class MapLoader : MonoBehaviour
                 itemObject.transform.eulerAngles = item.transforms.rotation;
             }
 
-        conMan.worldState = newWorldState;
-        conMan.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
+        Global.connectionManager.worldState = newWorldState;
+        Global.connectionManager.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
         //TODO: Add mobs
     }
 
 
 
-    void CreatePlayer(PlayerInfo pl=null, bool self=false) //27.01.2024
+    void CreatePlayer(PlayerInfo pl = null, bool self = false) //27.01.2024
     {                                                      //TODO: add every other variable that is to player.
                                                            //the fuck this function gets called out of nowhere? Booooo...
                                                            //no fr this time why the fuck this shit is getting called TWO FUCKING TIMES IN A ROW WHEN I CAN CLEARLY SEE LIKE IN THE DEBUGGER THAT IT SHOULD BE CALLED ONCE?
@@ -210,13 +259,13 @@ public class MapLoader : MonoBehaviour
         }
         PlayerSpawnPosition r_spawn_pos = spawns[UnityEngine.Random.Range(0, spawns.Length)];
 
-        if (conMan.clients.FirstOrDefault(x =>  x.id == pl.id) != null)
+        if (Global.connectionManager.clients.FirstOrDefault(x => x.id == pl.id) != null)
         {
             Debug.LogWarning("Tried to create multiple player models with the same id");
             return;
         }
-        
-        GameObject new_player = Instantiate(PlayerPrefab,r_spawn_pos.transform.position,r_spawn_pos.transform.rotation);
+
+        GameObject new_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
         new_player.name = pl.name;
         new_player.GetComponent<MenuController>().uiCanvas.gameObject.SetActive(false);
         new_player.GetComponent<MenuController>().enabled = self;
@@ -229,23 +278,23 @@ public class MapLoader : MonoBehaviour
         npl.movement.enabled = self;
         npl.playerInfo.isLocal = self;
         npl.playerInfo.isHost = pl.isHost;
-        npl.playerInfo.id = self ? conMan.client_self.id : npl.playerInfo.id;
-        npl.playerInfo.name = self ? conMan.client_self.name : npl.playerInfo.name;
+        npl.playerInfo.id = self ? Global.connectionManager.client_self.id : npl.playerInfo.id;
+        npl.playerInfo.name = self ? Global.connectionManager.client_self.name : npl.playerInfo.name;
         npl.voice.Initialize(VoiceManager.Type.Remote); //TODO: Remember to change it depending on local/remote side
         npl.cam.GetComponent<AudioListener>().enabled = false;
         npl.GetComponent<InventoryManager>().Remote = !self;
 
         ClientHandle binpl = new ClientHandle();
-        binpl.id = self ? conMan.client_self.id : npl.playerInfo.id;
-        binpl.name = self ? conMan.client_self.name : npl.playerInfo.name;
+        binpl.id = self ? Global.connectionManager.client_self.id : npl.playerInfo.id;
+        binpl.name = self ? Global.connectionManager.client_self.name : npl.playerInfo.name;
         binpl.connectedPlayer = npl;
-        conMan.clients.Add(binpl);
+        Global.connectionManager.clients.Add(binpl);
         if (self)
         {
-            conMan.client_self.connectedPlayer = npl;
+            Global.connectionManager.client_self.connectedPlayer = npl;
         }
 
         //DontDestroyOnLoad(new_player);
-        
+
     }
 }
