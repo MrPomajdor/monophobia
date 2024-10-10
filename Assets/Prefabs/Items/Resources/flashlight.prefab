@@ -227,8 +227,8 @@ MonoBehaviour:
     transforms:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0}
-      target_velocity: {x: 0, y: 0, z: 0}
       real_velocity: {x: 0, y: 0, z: 0}
+      real_angular_velocity: {x: 0, y: 0, z: 0}
     canBeActivated: 1
   thumbnail: {fileID: 21300000, guid: baa0bc2d798d7734fb4774cc8671e2d3, type: 3}
   tooltip:
@@ -381,7 +381,7 @@ Light:
       e32: 0
       e33: 1
     m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 2800000, guid: 47a5527fbad97e748b48368a6c5dc456, type: 3}
+  m_Cookie: {fileID: 2800000, guid: 2aff350511c6afa4296a96f56fb0e78f, type: 3}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0

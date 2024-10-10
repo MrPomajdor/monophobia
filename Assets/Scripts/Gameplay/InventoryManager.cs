@@ -81,7 +81,7 @@ public class InventoryManager : MonoBehaviour
     public void ParseItemPickup(Packet packet)
     {
 
-
+        
         using (MemoryStream _stream = new MemoryStream(packet.payload))
         using (BinaryReader reader = new BinaryReader(_stream))
         {
@@ -90,7 +90,7 @@ public class InventoryManager : MonoBehaviour
 
             if (playerID != owner.playerInfo.id) return;
 
-            Item itm = items.FirstOrDefault(x => x.itemStruct.id == itemID);
+            Item itm = Global.connectionManager.items.FirstOrDefault(x => x.itemStruct.id == itemID);
             if (itm == null) return;
 
             PickUpItem(itm);
@@ -103,35 +103,62 @@ public class InventoryManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetAxis("Mouse ScrollWheel") > 0)
-            SwitchItem(true);
-        else
-            SwitchItem(false);
+
+        if (!owner.playerInfo.isLocal)
+            return;
+
+        float axis = Input.GetAxis("Mouse ScrollWheel");
+
+        if (axis > 0)
+            SwitchItemDirection(1);
+
+        if (axis < 0)
+            SwitchItemDirection(-1);
 
     }
 
-    //TODO
-    public void SwitchItem(bool directon)
+    /// <summary>Switches selected item by direction</summary>
+    /// <param name="direction">1 or -1</param>
+    public void SwitchItemDirection(int direction)
     {
+        if(items.Count == 0) return;
+
+        int pos = items.IndexOf(current);
+        pos+=direction;
+        if (pos >= items.Count)
+            pos -= items.Count - 1;
+
+        if (pos < 0)
+            pos = items.Count - 1;
+
+        current = items[pos];
 
         UpdateInactive();
         SendItemSelected();
     }
-    //TODO
+    
     public void SwitchItem(int position)
     {
+        if (items.Count == 0) return;
+
         if (position > items.Count - 1) return;
+
+        current = items[position];
+
         UpdateInactive();
         SendItemSelected();
     }
 
     public void SwitchItem(Item target)
     {
+
         SwitchItemByID(target.itemStruct.id);
     }
 
     public void SwitchItemByID(int target)
     {
+        if (items.Count == 0) return;
+
         Item i = items.FirstOrDefault(x => x.itemStruct.id == target);
         current = i;
         UpdateInactive();

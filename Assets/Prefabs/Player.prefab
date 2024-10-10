@@ -1159,7 +1159,7 @@ MonoBehaviour:
     target_velocity: {x: 0, y: 0, z: 0}
     real_velocity: {x: 0, y: 0, z: 0}
   lastTime: 0
-  <voice>k__BackingField: {fileID: 7626471895663694973}
+  <voice>k__BackingField: {fileID: 5540899609716941165}
   m_debug: 1
   inputs:
     isSprinting: 0
@@ -1250,7 +1250,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7127683235744842812}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9ae984a80dd10604a898e2558683ae62, type: 3}
   m_Name: 
@@ -1397,17 +1397,15 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7127683235744842812}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 75f9e5a9b69767e478e8b4611c1e52b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  micDeviceId: 0
-  audioplayer: {fileID: 38896152851592566}
-  Bitrate: 24000
-  delay: 40
-  capture: 1
-  playLocally: 0
+  currentRole: 0
+  audioSource: {fileID: 38896152851592566}
+  voiceThreshold: 0.01
+  silenceDuration: 0.5
 --- !u!114 &4510345675070292442
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -79,3 +79,10 @@ public class LobbyInfo
 
 }
 
+[Serializable]
+public class InteractionInfo
+{
+    public int PlayerID;
+    public int InteractableID;
+    public string InteractionMessage;
+}

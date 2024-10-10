@@ -168,8 +168,8 @@ public class MapLoader : MonoBehaviour
             if (Global.connectionManager.client_self == null)
                 Global.connectionManager.client_self = new ClientHandle();
             Global.connectionManager.client_self.connectedPlayer = lcp;
-            lcp.voice.Initialize(VoiceManager.Type.Local);
-            lcp.voice.mainAudioSource.bypassReverbZones = true;
+            lcp.voice.Initialize(RevisitedVoiceManager.Role.Sender);
+            lcp.voice.audioSource.bypassReverbZones = true;
 
             //DontDestroyOnLoad(local_player);
 
@@ -180,6 +180,7 @@ public class MapLoader : MonoBehaviour
                 Global.connectionManager.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
                 foreach (Item item in Global.connectionManager.items)
                 {
+                    item.itemStruct.id = Global.connectionManager.worldState.items.Count;
                     Global.connectionManager.worldState.items.Add(item.itemStruct);
                 }
                 Global.connectionManager.SendWorldState();
@@ -206,7 +207,26 @@ public class MapLoader : MonoBehaviour
         lobbyLoading = false; //GOD DAMMIT
     }
 
+    public void RefreshWorldState()
+    {
 
+
+        if (!Global.connectionManager.client_self.connectedPlayer.playerInfo.isHost) return;
+        Debug.Log("Refreshing local hosted world state");
+
+        Global.connectionManager.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
+        Global.connectionManager.worldState.items.Clear();
+        foreach (Item item in Global.connectionManager.items)
+        {
+            item.itemStruct.id = Global.connectionManager.worldState.items.Count;
+            Global.connectionManager.worldState.items.Add(item.itemStruct);
+        }
+        Global.connectionManager.SendWorldState();
+
+
+
+
+    }
     public void UpdateWorldState(WorldState newWorldState)
     {
         Debug.Log("World state update!");
@@ -229,8 +249,8 @@ public class MapLoader : MonoBehaviour
             {
                 GameObject itemObject = Instantiate(Resources.Load<GameObject>(item.name));
 
-                //Item itemObjectScript = itemObject.GetComponent<Item>();
-                //itemObjectScript.item = item;
+                Item itemObjectScript = itemObject.GetComponent<Item>();
+                itemObjectScript.itemStruct.id = item.id;
 
                 itemObject.transform.position = item.transforms.position;
                 itemObject.transform.eulerAngles = item.transforms.rotation;
@@ -280,7 +300,7 @@ public class MapLoader : MonoBehaviour
         npl.playerInfo.isHost = pl.isHost;
         npl.playerInfo.id = self ? Global.connectionManager.client_self.id : npl.playerInfo.id;
         npl.playerInfo.name = self ? Global.connectionManager.client_self.name : npl.playerInfo.name;
-        npl.voice.Initialize(VoiceManager.Type.Remote); //TODO: Remember to change it depending on local/remote side
+        npl.voice.Initialize(RevisitedVoiceManager.Role.Receiver); //TODO: Remember to change it depending on local/remote side
         npl.cam.GetComponent<AudioListener>().enabled = false;
         npl.GetComponent<InventoryManager>().Remote = !self;
 

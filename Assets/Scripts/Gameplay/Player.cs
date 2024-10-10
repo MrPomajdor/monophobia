@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UIElements;
 [RequireComponent(typeof(Stats))]
 [RequireComponent(typeof(SoundEffectsManager))]
 public class Player : MonoBehaviour
@@ -16,13 +15,14 @@ public class Player : MonoBehaviour
     public float lastTime;
 
     [field: SerializeField]
-    public VoiceManager voice { get; private set; }
+    public RevisitedVoiceManager voice { get; private set; }
     public Stats stats { get; private set; }
     private SoundEffectsManager sfxManager;
     private FootstepsSFX footsteps;
     [SerializeField]
     private bool m_debug = false;
     public Inputs inputs = new Inputs();
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -40,9 +40,9 @@ public class Player : MonoBehaviour
         if (!playerInfo.isLocal) return;
         if (!m_debug) return;
 
-        style.fontSize = 30;
+        style.fontSize = 25;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {Global.connectionManager.client_self.name}\nServer ip: {Global.connectionManager._IPAddress}\n\nMIC VOL: {voice.lastMicVolume}\nMIC ACTIVE: {voice.MicrophoneActive}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {Global.connectionManager.client_self.name}\nServer ip: {Global.connectionManager._IPAddress}\n\nMIC VOL: {voice.LastMicVolume}\nMIC ACTIVE: {voice.MicActive}\nMIC BUF LEN: {voice.micBuffer.Count}", style);
     }
     float t;
 
@@ -58,12 +58,14 @@ public class Player : MonoBehaviour
     public void ParseTransformData(Packet packet)
     {
         PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
+
+        
         foreach (PlayerData player in json_.players) // for each player in recieved json
         {
 
             if (player.id == Global.connectionManager.client_self.id)
                 continue;
-            if(player.id == playerInfo.id)
+            if (player.id == playerInfo.id)
             {
                 transforms = player.transforms;
                 lastTime = Time.realtimeSinceStartup;
@@ -76,25 +78,39 @@ public class Player : MonoBehaviour
         }
     }
 
-
+    bool sw1;
     void Update()
     {
-        
+
         //TODO: (and the one more) transforms.target_velocity = 
-        
+
         if (!playerInfo.isLocal)
         {  //-----------------------------------------REMOTE CODE------------------------------------------------
             t += Time.deltaTime;
-            Tools.UpdatePos(transform, rb, transforms,this, inputs,5f);
-            if(inputs.isMoving)
+
+            Tools.UpdatePos(transform, rb, transforms, this, inputs, 5f);
+
+            //sound
+            if (inputs.isMoving)
             {
                 float sin;
-                if(inputs.isSprinting)
+                if (inputs.isSprinting)
                     sin = Mathf.Sin(t * 2) * 0.1f;
                 else
                     sin = Mathf.Sin(t) * 0.1f;
 
-                if (sin < 0.05) footsteps.PlayStepSound();
+                if (sin < 0.05)
+                {
+                    if (!sw1)
+                    {
+                        sw1 = true;
+                        footsteps.PlayStepSound();
+                    }
+                }
+                else
+                {
+                    sw1 = false;
+                }
             }
         }
         else
@@ -103,10 +119,12 @@ public class Player : MonoBehaviour
             lt3 += Time.deltaTime;
             transforms.position = transform.position;
             transforms.real_velocity = rb.velocity;
+            transforms.real_angular_velocity = rb.angularVelocity;
 
             //periodic position sending
             if (lt2 > 0.15f)
             {
+                
                 SendPlayerLocationInfo();
                 lt2 = 0;
             }
@@ -118,13 +136,15 @@ public class Player : MonoBehaviour
 
     public void SendPlayerLocationInfo()
     {
+
         Transforms transforms_ = transforms;
         transforms_.rotation = movement.GetAngles();
+
 
         PlayerData playerData = new PlayerData();
         playerData.inputs = inputs;
         playerData.id = playerInfo.id;
-        playerData.transforms = transforms_;
+        playerData.transforms = transforms;
 
         string mes = JsonUtility.ToJson(playerData);
         Packet packet = new Packet();

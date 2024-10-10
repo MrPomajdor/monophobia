@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Unity.Burst.Intrinsics;
-using UnityEditor.PackageManager;
 using UnityEngine;
 public class VoiceManager : MonoBehaviour
 {
@@ -85,10 +83,11 @@ public class VoiceManager : MonoBehaviour
 
             if (cl != null)
             {
-                cl.connectedPlayer.voice.ReceiveData(_pay);
+                cl.connectedPlayer.voice.ReceiveVoiceData(_pay);
                 Debug.Log($"Recieved voice packet for {cl.id}/{cl.name}");
             }
         });
+
 
     }
 

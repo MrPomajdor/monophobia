@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.Progress;
+
 
 public enum ItemType
 {
@@ -27,6 +27,29 @@ public class Item : MonoBehaviour
 
     public bool PickedUp = false;
 
+    bool showDevInfo = false;
+
+    private void OnGUI()
+    {
+        if (!showDevInfo) return;
+
+        GUIStyle style = new GUIStyle();
+        style.fontSize = 10;
+        style.normal.textColor = Color.green;
+
+        GUI.Label(new Rect(Screen.width / 2, Screen.height / 2, 500, 1000), $"ID : {itemStruct.id}\nName : {itemStruct.name}");
+    }
+
+    private void OnMouseEnter()
+    {
+        showDevInfo = true;
+    }
+
+    private void OnMouseExit()
+    {
+        showDevInfo = false;
+
+    }
     private void OnEnable()
     {
         Global.connectionManager.RegisterFlagReceiver(Flags.Response.itemData[0], ParseItemTransform);
@@ -62,28 +85,12 @@ public class Item : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        if (Global.connectionManager.IsSelfHost)
-        {
-            //if we are the host, set an id
-            itemStruct.id = otherItems.Count;
-            otherItems.Add(itemStruct.id);
-        }
-        else
-        {
-            //if not, me self destroy :c
-            //Destroy(gameObject);
-
-            //UPDATE:
-            //this is not the way to do it. It won't work.
-            //The map loader script will destroy every Item (if we are NOT a host), then send a [please give me list of the current items] packet, and the host will respond with the list!
-            //(propably it will)
-
-
-        }
+        if(!Global.connectionManager.items.Contains(this)) Global.connectionManager.mapLoader.RefreshWorldState();
 
     }
     public void UpdateInteractionNetwork()
     {
+        interactionInfo.itemID = itemStruct.id; 
         Global.connectionManager.SendItemInteractionInfo(interactionInfo);
     }
 
@@ -108,9 +115,10 @@ public class Item : MonoBehaviour
                 itemStruct.transforms.position = transform.position;
                 itemStruct.transforms.rotation = transform.eulerAngles;
                 itemStruct.transforms.real_velocity = rb.velocity;
+                itemStruct.transforms.real_angular_velocity = rb.angularVelocity;
                 //lastNetworkLocation = transform.position;
 
-                Global.connectionManager.SendItemLocationInfo(this);
+                SendItemLocationInfo();
 
             }
             else
@@ -150,5 +158,21 @@ public class Item : MonoBehaviour
         }
 
 
+    }
+
+    public void SendItemLocationInfo()
+    {
+        Transforms transforms_ = itemStruct.transforms;
+        ItemPosData itemPosData = new ItemPosData();
+        itemPosData.transforms = transforms_;
+        itemPosData.id = itemStruct.id;
+
+
+        string mes = JsonUtility.ToJson(itemPosData);
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Post.itemPos;
+        packet.AddToPayload(mes);
+        packet.Send(Global.connectionManager.udp_handler.client, Global.connectionManager.udp_handler.remoteEndPoint);
     }
 }

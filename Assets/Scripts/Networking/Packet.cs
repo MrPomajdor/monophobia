@@ -51,6 +51,9 @@ public static class Flags
         public static byte[] itemIntInf = new byte[] { 0xA4 };
         public static byte[] voice = new byte[] { 0xAC };
 
+        public static byte[] interactableMessage = new byte[] { 0xAD };
+
+
     }
     public static class Response
     {
@@ -75,6 +78,8 @@ public static class Flags
 
         public static byte[] playerData = new byte[] { 0xC4 }; //warning: contents explosive
         public static byte[] voice = new byte[] { 0x0C };
+        
+        public static byte[] interactableMessage = new byte[] { 0x0D };
 
     }
 }
@@ -234,21 +239,24 @@ public class Packet
         using (MemoryStream memoryStream = new MemoryStream(payload))
         using (BinaryReader reader = new BinaryReader(memoryStream))
         {
+            string ms="";
             try
             {
                 int stringLength = reader.ReadInt32();
                 byte[] stringData = reader.ReadBytes(stringLength);
-                string ms = Encoding.UTF8.GetString(stringData);
+                ms = Encoding.UTF8.GetString(stringData);
 
                 return JsonUtility.FromJson<T>(ms);
             }
-            catch
+            catch (Exception e) 
             {
-                Debug.LogError("Bad json packet");
+                Debug.LogError($"Bad json packet:\n {e.Message}\n {ms}");
                 return default(T);
             }
         }
     }
+
+    
 
 }
 public class PacketParser

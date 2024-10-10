@@ -1,160 +1,223 @@
 using POpusCodec;
 using POpusCodec.Enums;
-using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
-
-public enum Type
-{
-
-}
 
 public class RevisitedVoiceManager : MonoBehaviour
 {
-    public enum Type
-    {
-        Remote,
-        Local
-    }
-    public int micDeviceId = 0;
-    //Mic audio
-    AudioSource audiorecorder;
-    //playback audio
-    public AudioSource audioplayer;
+    public enum Role { Sender, Receiver }
+    public Role currentRole;
 
-    private Type _type;
-    List<float> micBuffer;
-    List<float> receiveBuffer;
-    int packageSize;
-    OpusEncoder encoder;
-    OpusDecoder decoder;
+    public AudioSource audioSource;
+    public float LastMicVolume { get; private set; }
+    public bool MicActive { get { return isSpeaking; } }
 
-    Channels opusChannels = Channels.Stereo;
-    SamplingRate opusSamplingRate = SamplingRate.Sampling48000;
-    public SamplingRate Bitrate = SamplingRate.Sampling24000;
-    public Delay delay = Delay.Delay40ms;
+    public float voiceThreshold = 0.01f; // Set the threshold to detect when the user is talking
+    public float silenceDuration = 0.5f; // Time after speaking ends to stop sending data
+    private float timeSinceLastSpeech = 0f;
+    private bool isSpeaking = false;
 
-    public bool capture = false;
-    public bool playLocally = false;
-    private ConnectionManager conMan;
-    public float lastMicVolume {  get; private set; }
-    public bool MicrophoneActive { get; private set; }
+    private OpusEncoder opusEncoder;
+    private OpusDecoder opusDecoder;
+    private const int sampleRate = 16000;
+    private const int channels = 1;
+    private const int frameSize = 320;
+    private const int bitrate = 16000;
+
+    List<float> receiveBuffer = new List<float>();
+    public Queue<float[]> micBuffer = new Queue<float[]>();
+
+    //private AudioClip micClip;
+    //private int micPosition = 0;
+    //private bool isMicActive;
+
+    private Player owner;
     private void Start()
     {
-        //Initialize(Type.Local);
+        owner = GetComponent<Player>();
     }
-    public void Initialize(Type voiceType)
+    private float accumulatedTime = 0f;
+    private void Update()
     {
-        conMan = FindObjectOfType<ConnectionManager>();
-        _type = voiceType;
-        micBuffer = new List<float>();
-        audiorecorder = GetComponent<AudioSource>();
-        if (_type == Type.Local)
+        if (currentRole == Role.Sender)
         {
-            
-            encoder = new OpusEncoder(opusSamplingRate, opusChannels);
-            encoder.EncoderDelay = delay;
-            encoder.ForceChannels = ForceChannels.NoForce;
-            encoder.Bitrate = (int)Bitrate;
-            encoder.MaxBandwidth = Bandwidth.SuperWideband;
-            Debug.Log("Opustest.Start: framesize: " + encoder.FrameSizePerChannel + " " + encoder.InputChannels);
-            // the encoder delay has some influence on the amout of data we need to send, but it's not a multiplication of it
-            packageSize = encoder.FrameSizePerChannel *  (int)opusChannels;
-
-            // setup a microphone audio recording
-            Debug.Log("Opustest.Start: setup mic with " + Microphone.devices[micDeviceId] + " " + AudioSettings.outputSampleRate);
-            
-            audiorecorder.loop = true;
-            audiorecorder.clip = Microphone.Start(
-                Microphone.devices[micDeviceId],
-                true,
-                1,
-                AudioSettings.outputSampleRate);
-            audiorecorder.Play();
-
-        }
-        else
-        {
-            audiorecorder.clip = AudioClip.Create("recv", (int)opusSamplingRate * 2, (int)opusChannels, (int)opusSamplingRate, true, OnAudioRead);
-            audiorecorder.loop = true;
-            audiorecorder.Play();
-        }
-        // playback stuff
-        decoder = new OpusDecoder(opusSamplingRate, opusChannels);
-        
-        receiveBuffer = new List<float>();
-
-        // setup a playback audio clip, length is set to 1 sec (should not be used anyways)
-        AudioClip myClip = AudioClip.Create("MyPlayback", (int)opusSamplingRate, (int)opusChannels, (int)opusSamplingRate, true, OnAudioRead, OnAudioSetPosition);
-        audioplayer.loop = true;
-        audioplayer.clip = myClip;
-        audioplayer.Play();
-    }
-    void OnAudioFilterRead(float[] data, int channels)
-    {
-        if (capture && _type==Type.Local)
-        {
-            // add mic data to buffer
-            micBuffer.AddRange(data);
-        }
-
-        // clear array so we dont output any sound
-        for (int i = 0; i < data.Length; i++)
-        {
-            data[i] = 0;
-        }
-
-        //use the same audio source to play the recieved remote sound.
-        if (_type == Type.Remote)
-        {
-            int pullSize = Mathf.Min(data.Length, receiveBuffer.Count);
-            float[] dataBuf = receiveBuffer.GetRange(0, pullSize).ToArray();
-            dataBuf.CopyTo(data, 0);
-            receiveBuffer.RemoveRange(0, pullSize);
-        }
-    }
-
-    void OnAudioRead(float[] data)
-    {
-        //nop
-    }
-    void OnAudioSetPosition(int newPosition)
-    {
-        //nop
-    }
-
-    void SendData()
-    {
-        if (_type==Type.Local)
-        {
-            // take pieces of buffer and send data
-            while (micBuffer.Count > packageSize)
+            if (LastMicVolume > voiceThreshold)
             {
-                byte[] encodedData = encoder.Encode(micBuffer.GetRange(0, packageSize).ToArray());
-                conMan.SendVoiceData(encodedData);
-                if (playLocally) ReceiveData(encodedData);
-                micBuffer.RemoveRange(0, packageSize);
+                isSpeaking = true;
+                timeSinceLastSpeech = 0f;
+            }
+            else
+            {
+                timeSinceLastSpeech += Time.deltaTime;
+                if (isSpeaking && timeSinceLastSpeech >= silenceDuration)
+                {
+                    isSpeaking = false;
+                    SendVoiceData(new byte[0]); // Send empty data to signal end of transmission
+                }
+
+            }
+
+            while (micBuffer.Count>0)
+            {
+
+
+                // Calculate how many samples to process for this time period
+                float[] frame = micBuffer.Dequeue();
+
+                byte[] encodedData = EncodeAudioData(frame);
+                SendVoiceData(encodedData);
+            }
+
+        }
+    }
+    public void Initialize(Role role)
+    {
+        currentRole = role;
+        audioSource = gameObject.GetComponent<AudioSource>();
+        if (role == Role.Sender)
+        {
+            // Initialize Opus encoder for sending
+            opusEncoder = new OpusEncoder((SamplingRate)sampleRate, (Channels)channels, bitrate, OpusApplicationType.Voip);
+            //opusEncoder.Bitrate = bitrate;
+            audioSource.clip = Microphone.Start(null, true, 1, sampleRate); // 1 second buffer length
+            while (Microphone.GetPosition(null) <= 0) { } // Wait until the microphone starts
+        }
+        else if (role == Role.Receiver)
+        {
+            // Initialize Opus decoder for receiving
+            opusDecoder = new OpusDecoder((SamplingRate)sampleRate, (Channels)channels);
+            audioSource.clip = AudioClip.Create("recv", sampleRate * 2, channels, sampleRate, true, OnAudioPlaybackRead);
+
+        }
+
+        audioSource.loop = true;
+        audioSource.Play();
+    }
+    void OnAudioPlaybackRead(float[] data) { }
+
+    // Unity's OnAudioFilterRead is called every audio frame, before the data is passed to the output
+    private void OnAudioFilterRead(float[] data, int channels)
+    {
+        if (currentRole == Role.Sender)
+        {
+            HandleAudioData(data);
+        }
+
+        System.Array.Clear(data, 0, data.Length);
+
+        if (currentRole == Role.Receiver)
+        {
+            if (receiveBuffer.Count >= data.Length)
+            {
+                float[] dataBuf = receiveBuffer.GetRange(0, data.Length).ToArray();
+                receiveBuffer.RemoveRange(0, data.Length);
+                dataBuf.CopyTo(data, 0);
             }
         }
+        // You can implement receiving audio data in a different thread or using an event system.
     }
 
-   public void ReceiveData(byte[] encodedData)
+    // This method handles audio data and voice detection
+    private void HandleAudioData(float[] data)
     {
-       /* if (_type==Type.Remote && !playLocally)
+        // Check if volume exceeds threshold
+        float volume = data.Average(Mathf.Abs);
+        LastMicVolume = volume;
+
+        if (isSpeaking)
         {
-            Debug.Log("VoiceManagerReceiveData: discard! " + encodedData.Length);
-            return;
-        }*/
+            micBuffer.Enqueue(data);
+        }
+        
 
 
-        // the data would need to be sent over the network, we just decode it now to test the result
-        receiveBuffer.AddRange(decoder.DecodePacketFloat(encodedData));
+
     }
 
-    // Update is called once per frame
-    void Update()
+    // Encodes audio data using POpusCodec
+    private byte[] EncodeAudioData(float[] data)
     {
-        SendData();
+        short[] pcmData = new short[data.Length];
+        for (int i = 0; i < data.Length; i++)
+        {
+            pcmData[i] = (short)(Mathf.Clamp(data[i], -1f, 1f) * short.MaxValue);
+        }
+
+        byte[] encoded = opusEncoder.Encode(pcmData);
+        return encoded;
+    }
+
+
+    private void SendVoiceData(byte[] data)
+    {
+        Global.connectionManager.SendVoiceData(data);
+    }
+
+    // If you need to decode audio (e.g., if you're a receiver), implement it here
+    public void ReceiveVoiceData(byte[] encodedData)
+    {
+        if (currentRole == Role.Receiver && encodedData.Length > 0)
+        {
+            short[] decodedPcm = new short[frameSize * channels];
+            decodedPcm = opusDecoder.DecodePacket(encodedData);
+
+            float[] pcmData = new float[decodedPcm.Length];
+            for (int i = 0; i < decodedPcm.Length; i++)
+            {
+                pcmData[i] = decodedPcm[i] / (float)short.MaxValue;
+            }
+
+            receiveBuffer.AddRange(pcmData);
+
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (opusEncoder != null)
+        {
+            opusEncoder.Dispose();
+        }
+        if (opusDecoder != null)
+        {
+            opusDecoder.Dispose();
+        }
+
+        if (Microphone.IsRecording(null))
+        {
+            Microphone.End(null);
+        }
+    }
+
+    private void OnEnable()
+    {
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.voice[0], ParseVoiceData);
+    }
+    private void OnDisable()
+    {
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.voice[0], ParseVoiceData);
+    }
+
+
+    private void ParseVoiceData(Packet packet)
+    {
+        int player_id = -1;
+        byte[] _pay;
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+
+            player_id = reader.ReadInt32();
+            int pay_len = reader.ReadInt32();
+            _pay = reader.ReadBytes(pay_len);
+        }
+        if (player_id != owner.playerInfo.id)
+            return;
+
+        ReceiveVoiceData(_pay);
+
+
     }
 }

@@ -48,7 +48,7 @@ public class MouseRotation : MonoBehaviour
         yaw += speedH * Input.GetAxis("Mouse X");
 
         pitch -= speedV * Input.GetAxis("Mouse Y");
-
+        
 
         if (pitch >= maxPitch)
             pitch = maxPitch - 0.5f;

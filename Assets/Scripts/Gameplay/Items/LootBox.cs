@@ -1,0 +1,37 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class LootBox : Interactable
+{
+    public List<string> LootNames = new List<string>();
+
+    public override void Initialize()
+    {
+        
+    }
+
+    public override void Interact(Player interactee, string message = "")
+    {
+        if(State.used) return;
+        State.used = true;
+
+        if (!interactee.playerInfo.isHost) return;
+        
+        string LootName = LootNames[Random.Range(0, LootNames.Count)];
+        GameObject spawnedLoot = Instantiate(Resources.Load<GameObject>(LootName),transform.position,transform.rotation);
+        
+        
+    }
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+}

@@ -12,6 +12,7 @@ using System.Text;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 public static class Global
 {
@@ -23,27 +24,55 @@ public static class Tools
     public static void UpdatePos(Transform transform, Rigidbody rb, Transforms transforms, Player player = null, Inputs inputs = null, float smoothingFactor = 0.5f)
     {
         
-        //Debug.Log($"Shit fuck shit lmaoooo {transform.gameObject.name}");
+        //Velocity
         rb.velocity = transforms.real_velocity;
         rb.velocity += transforms.position - transform.position;
+
+        //angular velocity
         
+
+        //position
         if (Vector3.Distance(transform.position, transforms.position) > 2)
             transform.position = transforms.position;
         if (!player)
-            transform.rotation = Quaternion.Lerp(transform.rotation,Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z),smoothingFactor*Time.deltaTime);
+        {
+            rb.angularVelocity = transforms.real_angular_velocity;
+            float rot_diff = Quaternion.Angle(transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z));
+            if (rot_diff > 10)
+                transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z), smoothingFactor * Time.deltaTime);
+            if(rot_diff > 25)
+                transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z);
+            //else
+            //{
+            
+            //    rb.angularVelocity += transform.rotation.eulerAngles - transforms.rotation;
+            //}
+            //    transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z), smoothingFactor * Time.deltaTime);
+        }
         else
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, transforms.rotation.y, 0),smoothingFactor*Time.deltaTime);
-            player.cam.transform.rotation = Quaternion.Slerp(player.cam.transform.rotation,Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, 0), smoothingFactor * Time.deltaTime); 
-            rb.AddForce(inputs.MoveDirection*500 * Time.deltaTime,ForceMode.Force);
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, transforms.rotation.y, 0), smoothingFactor * Time.deltaTime);
+            player.cam.transform.rotation = Quaternion.Slerp(player.cam.transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, 0), smoothingFactor * Time.deltaTime);
+            rb.AddForce(inputs.MoveDirection * 500 * Time.deltaTime, ForceMode.Force);
         }
        
+    }
+
+    public static bool Difference(Transforms a, Transforms b)
+    {
+        return Vector3.Distance(a.position, b.position) > 2 || Quaternion.Angle(Quaternion.Euler(a.rotation.x, a.rotation.y, a.rotation.z), Quaternion.Euler(b.rotation.x, b.rotation.y, b.rotation.z)) >= 5;
+    }
+
+    public static bool Difference(Inputs a, Inputs b)
+    {
+        return (a.isCrouching != b.isCrouching || a.isMoving != b.isMoving || a.isSprinting != b.isSprinting);
     }
 }
 [Serializable]
 public class WorldState
 {
     public List<ItemStruct> items = new List<ItemStruct>();
+    public List<InteractableState> interactables = new List<InteractableState> ();
     //TODO: Add mobs
 }
 
@@ -70,13 +99,19 @@ public class ConnectionManager : MonoBehaviour
     private event Action eventsClone;
     public UDPHandler udp_handler { get; private set; }
     private MenuManager menuManager;
-    private MapLoader mapLoader;
+    public MapLoader mapLoader;
 
     [SerializeField]
     private Dictionary<byte, List<Action<Packet>>> ReceiversMap = new Dictionary<byte, List<Action<Packet>>>(); //looks wierd xd
-    
+
+
+
+    /// <summary>Adds an action to received flag</summary>
+    /// <param name="action">The action to be executed</param>
+    /// <param name="flag">corresponding flag</param>
     public void RegisterFlagReceiver(byte flag,Action<Packet> action)
-    {
+    { 
+
         //Debug.Log($"Registering action for flag {flag.ToString("X")} ");
         if (ReceiversMap.ContainsKey(flag))
             ReceiversMap[flag].Add(action);
@@ -86,6 +121,10 @@ public class ConnectionManager : MonoBehaviour
             ReceiversMap[flag].Add(action);
         }
     }
+
+    /// <summary>Removes an action to received flag</summary>
+    /// <param name="action">The action to be removed</param>
+    /// <param name="flag">corresponding flag</param>
     public void UnregisterFlagReceiver(byte flag, Action<Packet> action)
     {
         if(ReceiversMap.ContainsKey(flag))
@@ -97,6 +136,14 @@ public class ConnectionManager : MonoBehaviour
     {
         get
         {
+            float b = 0;
+            while (client_self.connectedPlayer == null)
+            {
+                b += Time.deltaTime;
+                if (b > 5) Debug.LogError("Waiting for connected player timeout");
+                break;
+            }
+
             if (client_self != null && this.client_self.connectedPlayer != null)
                 return this.client_self.connectedPlayer.playerInfo.isHost;
             else return false;
@@ -434,21 +481,7 @@ public class ConnectionManager : MonoBehaviour
         packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
     }
 
-    public void SendItemLocationInfo(Item item)
-    {
-        Transforms transforms_ = item.itemStruct.transforms;
-        ItemPosData itemPosData = new ItemPosData();
-        itemPosData.transforms = transforms_;
-        itemPosData.id = item.itemStruct.id;
-
-
-        string mes = JsonUtility.ToJson(itemPosData);
-        Packet packet = new Packet();
-        packet.header = Headers.data;
-        packet.flag = Flags.Post.itemPos;
-        packet.AddToPayload(mes);
-        packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
-    }
+    
     //TCP
     public void SendItemInteractionInfo(ItemInteractionInfo interactionInfo)
     {
@@ -484,13 +517,13 @@ public class ConnectionManager : MonoBehaviour
     {
         if (packet.flag[0] == Flags.Response.closing_con[0])
         {
-            FindObjectOfType<MapLoader>().ReturnToMenu();
+            ThreadManager.ExecuteOnMainThread(() => { FindObjectOfType<MapLoader>().ReturnToMenu(); });
             Disconnect();
             return;
         }
         if(packet.flag[0] == Flags.Response.lobbyClosing[0])
         {
-            FindObjectOfType<MapLoader>().ReturnToMenu();
+            ThreadManager.ExecuteOnMainThread(() => { FindObjectOfType<MapLoader>().ReturnToMenu(); });
             return;
         }
         if (packet.payload.Length < 4)
