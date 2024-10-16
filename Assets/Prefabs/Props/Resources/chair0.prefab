@@ -260,7 +260,7 @@ GameObject:
   - component: {fileID: 3159519297192636982}
   - component: {fileID: 2208810281443334112}
   - component: {fileID: 7236308770572877765}
-  - component: {fileID: -1960102865677793156}
+  - component: {fileID: 29905464404782835}
   m_Layer: 0
   m_Name: chair0
   m_TagString: Untagged
@@ -345,7 +345,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &-1960102865677793156
+--- !u!114 &29905464404782835
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -354,7 +354,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1671529407289475155}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dd110eefa36fbdc4aa890a682305a2b6, type: 3}
+  m_Script: {fileID: 11500000, guid: fbd052179316ca0428d05ab9d61e66c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   type: 1
@@ -364,8 +364,8 @@ MonoBehaviour:
     transforms:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0}
-      target_velocity: {x: 0, y: 0, z: 0}
       real_velocity: {x: 0, y: 0, z: 0}
+      real_angular_velocity: {x: 0, y: 0, z: 0}
     canBeActivated: 0
   thumbnail: {fileID: 0}
   tooltip:

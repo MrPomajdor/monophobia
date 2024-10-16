@@ -7,7 +7,7 @@ public enum ItemType
     PickUp,
     StaticInteractive
 }
-public class Item : MonoBehaviour
+public abstract class Item : MonoBehaviour
 {
     public static List<int> otherItems = new List<int>();
     public ItemType type;
@@ -16,9 +16,6 @@ public class Item : MonoBehaviour
     public Tooltip tooltip;
     public Rigidbody rb { get; private set; }
     public ItemInteractionInfo interactionInfo = new ItemInteractionInfo();
-    private float falloffTracker;
-    private bool falloffHold;
-    private bool se;
     public Player heldBy;
     [field: SerializeField]
     public float lastNetworkTime { get; private set; }
@@ -28,6 +25,23 @@ public class Item : MonoBehaviour
     public bool PickedUp = false;
 
     bool showDevInfo = false;
+    bool Initialized = false;
+
+    
+    public abstract void Interact();
+    public abstract void ItemStart();
+
+    public void InternalInteract()
+    {
+        Interact();
+    }
+    public void InternalItemStart()
+    {
+        rb = GetComponent<Rigidbody>();
+        if (!Global.connectionManager.items.Contains(this)) Global.connectionManager.mapLoader.RefreshWorldState();
+        ItemStart();
+        Initialized = true;
+    }
 
     private void OnGUI()
     {
@@ -84,10 +98,14 @@ public class Item : MonoBehaviour
     }
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        if(!Global.connectionManager.items.Contains(this)) Global.connectionManager.mapLoader.RefreshWorldState();
+       
+
+
+        Global.connectionManager.AddLocalPlayerAction(InternalItemStart);
 
     }
+
+    
     public void UpdateInteractionNetwork()
     {
         interactionInfo.itemID = itemStruct.id; 
@@ -96,7 +114,7 @@ public class Item : MonoBehaviour
 
     void Update()
     {
-        if (Global.connectionManager.client_self.connectedPlayer == null) return;
+        if (Global.connectionManager.client_self.connectedPlayer == null || Initialized==false) return;
 
         if (Global.connectionManager.IsSelfHost)
         {

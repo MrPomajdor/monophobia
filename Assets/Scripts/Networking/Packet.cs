@@ -52,6 +52,7 @@ public static class Flags
         public static byte[] voice = new byte[] { 0xAC };
 
         public static byte[] interactableMessage = new byte[] { 0xAD };
+        public static byte[] codeInteractionMessage = new byte[] { 0xAE };
 
 
     }
@@ -80,6 +81,7 @@ public static class Flags
         public static byte[] voice = new byte[] { 0x0C };
         
         public static byte[] interactableMessage = new byte[] { 0x0D };
+        public static byte[] codeInteractionMessage = new byte[] { 0x0E };
 
     }
 }

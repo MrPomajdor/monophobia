@@ -126,7 +126,7 @@ public class InventoryManager : MonoBehaviour
         int pos = items.IndexOf(current);
         pos+=direction;
         if (pos >= items.Count)
-            pos -= items.Count - 1;
+            pos = 0;
 
         if (pos < 0)
             pos = items.Count - 1;
@@ -200,16 +200,22 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    public void PickUpItem(Item item)
+    public void PickUpItem(Item item, bool switch_to=false)
+    ///<summary>
+    ///Adds item to inventory
+    ///<param name="item">Target item</param>
+    ///<param name="switch_to">if true, picked up item is immeditly switched to currend held item</param>
+    /// </summary>
     {
-        if (items.Contains(item) || items.Count >= InventorySize) return;
+        if (items.Contains(item) || items.Count >= InventorySize) return; //TODO : Indicate full inventory
 
         items.Add(item);
         item.PickedUp = true;
-        if (items.Count == 1)
+        if (items.Count == 1 || switch_to)
         {
             SwitchItem(item);
         }
+
 
         item.transform.root.gameObject.GetComponent<Collider>().isTrigger = true;  //what the fuck
         item.transform.root.gameObject.GetComponent<Rigidbody>().freezeRotation = true;  //what the fuck

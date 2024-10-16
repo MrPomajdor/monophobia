@@ -32,10 +32,10 @@ public class ItemInteraction : MonoBehaviour
 
         if (remote) return; //-----------------------------LOCAL CODE BELOW----------------------------
 
-        if (Input.GetKeyDown(KeyCode.Mouse0) && SelfInventory.current!=null && SelfInventory.current.itemStruct.canBeActivated)
+        if (Input.GetKeyDown(KeyCode.Mouse0) && SelfInventory.current!=null)
         {
 
-            SelfInventory.current.interactionInfo.activated = !SelfInventory.current.interactionInfo.activated;
+            SelfInventory.current.InternalInteract();
             SelfInventory.current.UpdateInteractionNetwork();
 
         }

@@ -175,7 +175,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2330696240371094665}
-  - component: {fileID: 5261245473833028922}
   - component: {fileID: 8446134202571673065}
   - component: {fileID: 8473042654581904705}
   - component: {fileID: 3302963867071753854}
@@ -208,39 +207,6 @@ Transform:
   - {fileID: 3394701709056017507}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 9.675, y: 4.312, z: 254.4}
---- !u!114 &5261245473833028922
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4249070850649168096}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dd110eefa36fbdc4aa890a682305a2b6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  type: 0
-  itemStruct:
-    id: 0
-    name: flashlight
-    transforms:
-      position: {x: 0, y: 0, z: 0}
-      rotation: {x: 0, y: 0, z: 0}
-      real_velocity: {x: 0, y: 0, z: 0}
-      real_angular_velocity: {x: 0, y: 0, z: 0}
-    canBeActivated: 1
-  thumbnail: {fileID: 21300000, guid: baa0bc2d798d7734fb4774cc8671e2d3, type: 3}
-  tooltip:
-    title: Flashlight
-    description: A thing that makes light
-    use: Click LMB to power on/off the flashlight
-  interactionInfo:
-    itemID: 0
-    activated: 0
-  heldBy: {fileID: 0}
-  <lastNetworkTime>k__BackingField: 0
-  PickedUp: 0
 --- !u!114 &8446134202571673065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -253,6 +219,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41ab9bf49ec925445909becba676a37b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  type: 0
+  itemStruct:
+    id: 0
+    name: flashlight
+    transforms:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0}
+      real_velocity: {x: 0, y: 0, z: 0}
+      real_angular_velocity: {x: 0, y: 0, z: 0}
+    canBeActivated: 1
+  thumbnail: {fileID: 0}
+  tooltip:
+    title: Flashlight
+    description: Produces light
+    use: Press LMB to toggle
+  interactionInfo:
+    itemID: 0
+    activated: 0
+  heldBy: {fileID: 0}
+  <lastNetworkTime>k__BackingField: 0
+  PickedUp: 0
   m_Light: {fileID: 1225565561291429704}
   glowingThing: {fileID: 7278495585147636715}
 --- !u!136 &8473042654581904705
@@ -350,7 +337,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 4194304
+  m_Intensity: 1057025
   m_Range: 236
   m_SpotAngle: 63.700245
   m_InnerSpotAngle: 21.80208
@@ -381,7 +368,7 @@ Light:
       e32: 0
       e33: 1
     m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 2800000, guid: 2aff350511c6afa4296a96f56fb0e78f, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0

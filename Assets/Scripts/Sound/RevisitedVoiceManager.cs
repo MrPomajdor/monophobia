@@ -38,7 +38,6 @@ public class RevisitedVoiceManager : MonoBehaviour
     {
         owner = GetComponent<Player>();
     }
-    private float accumulatedTime = 0f;
     private void Update()
     {
         if (currentRole == Role.Sender)
@@ -155,7 +154,7 @@ public class RevisitedVoiceManager : MonoBehaviour
         Global.connectionManager.SendVoiceData(data);
     }
 
-    // If you need to decode audio (e.g., if you're a receiver), implement it here
+    
     public void ReceiveVoiceData(byte[] encodedData)
     {
         if (currentRole == Role.Receiver && encodedData.Length > 0)
@@ -213,7 +212,7 @@ public class RevisitedVoiceManager : MonoBehaviour
             int pay_len = reader.ReadInt32();
             _pay = reader.ReadBytes(pay_len);
         }
-        if (player_id != owner.playerInfo.id)
+        if (player_id == owner.playerInfo.id)
             return;
 
         ReceiveVoiceData(_pay);

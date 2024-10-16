@@ -105,6 +105,8 @@ public class ConnectionManager : MonoBehaviour
     private Dictionary<byte, List<Action<Packet>>> ReceiversMap = new Dictionary<byte, List<Action<Packet>>>(); //looks wierd xd
 
 
+    private Queue<Action> LocalPlayerActions = new Queue<Action>();
+
 
     /// <summary>Adds an action to received flag</summary>
     /// <param name="action">The action to be executed</param>
@@ -130,6 +132,11 @@ public class ConnectionManager : MonoBehaviour
         if(ReceiversMap.ContainsKey(flag))
             if(ReceiversMap[flag].Contains(action))
                 ReceiversMap[flag].Remove(action);
+    }
+
+    public void AddLocalPlayerAction(Action action)
+    {
+        LocalPlayerActions.Enqueue(action);
     }
 
     public bool IsSelfHost
@@ -322,6 +329,7 @@ public class ConnectionManager : MonoBehaviour
     private void OnEnable()
     {
         Global.connectionManager = this;
+        StartCoroutine(WaitForLocalPlayer());
     }
 
     private void Start()
@@ -579,21 +587,6 @@ public class ConnectionManager : MonoBehaviour
 
         }
     }
-    private void ParsePlayerList(Packet packet)
-    {
-        using (MemoryStream _stream = new MemoryStream(packet.payload))
-        using (BinaryReader reader = new BinaryReader(_stream))
-        {
-            int playerCount = reader.ReadInt32();
-            for (int i = 0; i > playerCount; i++)
-            {
-                ClientHandle client = new ClientHandle();
-                client.id = reader.ReadInt32();
-                client.name = reader.ReadString();
-                //clients.Add(client);
-            }
-        }
-    }
 
 
 
@@ -670,6 +663,22 @@ public class ConnectionManager : MonoBehaviour
             mainThreadQueuedCallbacks = null;
             eventsClone.Invoke();
             eventsClone = null;
+        }
+    }
+
+    IEnumerator WaitForLocalPlayer()
+    {
+        while (true)
+        {
+            if (client_self.connectedPlayer != null)
+            {
+                if(LocalPlayerActions.Count > 0)
+                {
+                    Action action = LocalPlayerActions.Dequeue();
+                    action.Invoke();
+                }
+            }
+            yield return null;
         }
     }
 

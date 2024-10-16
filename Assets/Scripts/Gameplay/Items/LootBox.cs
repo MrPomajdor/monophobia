@@ -19,7 +19,9 @@ public class LootBox : Interactable
         if (!interactee.playerInfo.isHost) return;
         
         string LootName = LootNames[Random.Range(0, LootNames.Count)];
-        GameObject spawnedLoot = Instantiate(Resources.Load<GameObject>(LootName),transform.position,transform.rotation);
+        Item spawnedLoot = Instantiate(Resources.Load<GameObject>(LootName),transform.position,transform.rotation).GetComponent<Item>();
+
+        interactee.inventoryManager.PickUpItem(spawnedLoot);
         
         
     }

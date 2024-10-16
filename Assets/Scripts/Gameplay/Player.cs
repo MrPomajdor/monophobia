@@ -22,6 +22,7 @@ public class Player : MonoBehaviour
     [SerializeField]
     private bool m_debug = false;
     public Inputs inputs = new Inputs();
+    public InventoryManager inventoryManager { get; private set; }
 
     void Start()
     {
@@ -29,6 +30,7 @@ public class Player : MonoBehaviour
         stats = GetComponent<Stats>();
         sfxManager = GetComponent<SoundEffectsManager>();
         footsteps = GetComponent<FootstepsSFX>();
+        inventoryManager = GetComponent<InventoryManager>();
     }
     Vector3 prev, prevrot;
     // Update is called once per frame
