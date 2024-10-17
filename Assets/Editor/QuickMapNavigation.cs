@@ -31,6 +31,10 @@ public class QuickMapNavigation : EditorWindow
         {
             EditorSceneManager.OpenScene("Assets/Maps/lobby0/lobby0.unity");
         }
+	if (GUILayout.Button("psychward"))
+        {
+            EditorSceneManager.OpenScene("Assets/Maps/psychward/psychward.unity");
+        }
         GUILayout.Space(10);
         GUILayout.Label("Developement levels:");
         if (GUILayout.Button("ScriptDev"))
