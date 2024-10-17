@@ -254,6 +254,8 @@ public class MapLoader : MonoBehaviour
 
                 itemObject.transform.position = item.transforms.position;
                 itemObject.transform.eulerAngles = item.transforms.rotation;
+
+                itemObjectScript.InternalItemStart();
             }
 
         Global.connectionManager.worldState = newWorldState;

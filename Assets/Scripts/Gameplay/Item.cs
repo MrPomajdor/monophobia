@@ -90,17 +90,20 @@ public abstract class Item : MonoBehaviour
     public void ParseItemInteraction(Packet packet)
     {
         ItemInteractionInfo inf = packet.GetJson<ItemInteractionInfo>();
+        
         if (inf == null)
             return;
 
         if (inf.itemID == itemStruct.id)
             interactionInfo = inf;
+
+        Interact();
     }
     void Start()
     {
        
 
-
+        
         Global.connectionManager.AddLocalPlayerAction(InternalItemStart);
 
     }

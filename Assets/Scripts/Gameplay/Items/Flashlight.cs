@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.Progress;
 
 
 public class Flashlight : Item
@@ -10,7 +9,8 @@ public class Flashlight : Item
     public GameObject glowingThing;
     public override void Interact()
     {
-        interactionInfo.activated = !interactionInfo.activated;
+        if(Global.connectionManager.client_self.connectedPlayer.playerInfo.isLocal)
+            interactionInfo.activated = !interactionInfo.activated;
         Refresh();
         
     }
