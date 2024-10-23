@@ -177,13 +177,7 @@ public class MapLoader : MonoBehaviour
             //WORLD STATE SYNCING
             if (isSelfHost)
             {
-                Global.connectionManager.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
-                foreach (Item item in Global.connectionManager.items)
-                {
-                    item.itemStruct.id = Global.connectionManager.worldState.items.Count;
-                    Global.connectionManager.worldState.items.Add(item.itemStruct);
-                }
-                Global.connectionManager.SendWorldState();
+                RefreshWorldState();
             }
             else
             {
@@ -219,7 +213,13 @@ public class MapLoader : MonoBehaviour
         foreach (Item item in Global.connectionManager.items)
         {
             item.itemStruct.id = Global.connectionManager.worldState.items.Count;
-            Global.connectionManager.worldState.items.Add(item.itemStruct);
+            NetworkItemStruct networkItem = new NetworkItemStruct();
+            networkItem.id = item.itemStruct.id;
+            networkItem.name = item.itemStruct.name;
+            networkItem.transforms = new Transforms();
+            networkItem.transforms.position = item.transform.position;
+            networkItem.transforms.rotation = item.transform.eulerAngles;
+            Global.connectionManager.worldState.items.Add(networkItem);
         }
         Global.connectionManager.SendWorldState();
 
@@ -233,11 +233,11 @@ public class MapLoader : MonoBehaviour
         if (Global.connectionManager.worldState.Equals(newWorldState))
             return;
 
-        ItemStruct[] itemsToRemove = Global.connectionManager.worldState.items.Except(newWorldState.items).ToArray();
-        ItemStruct[] newItems = newWorldState.items.Except(Global.connectionManager.worldState.items).ToArray();
+        NetworkItemStruct[] itemsToRemove = Global.connectionManager.worldState.items.Except(newWorldState.items).ToArray();
+        NetworkItemStruct[] newItems = newWorldState.items.Except(Global.connectionManager.worldState.items).ToArray();
         Item[] itemsLoaded = FindObjectsByType<Item>(FindObjectsSortMode.None);
         if (itemsToRemove.Length > 0)
-            foreach (ItemStruct item in itemsToRemove)
+            foreach (NetworkItemStruct item in itemsToRemove)
             {
                 Item x = itemsLoaded.FirstOrDefault(x => x.itemStruct.id == item.id);
                 if (x != null)
@@ -245,7 +245,7 @@ public class MapLoader : MonoBehaviour
             }
 
         if (newItems.Length > 0)
-            foreach (ItemStruct item in newItems)
+            foreach (NetworkItemStruct item in newItems)
             {
                 GameObject itemObject = Instantiate(Resources.Load<GameObject>(item.name));
 
