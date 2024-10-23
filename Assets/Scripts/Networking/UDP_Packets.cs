@@ -50,10 +50,8 @@ public class Transforms
 {
     public Vector3 position;
     public Vector3 rotation;
-   // public Vector3 target_velocity;
     public Vector3 real_velocity;
     public Vector3 real_angular_velocity;
-
 }
 
 

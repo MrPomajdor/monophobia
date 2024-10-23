@@ -7,7 +7,7 @@ public enum ItemType
     PickUp,
     StaticInteractive
 }
-public abstract class Item : MonoBehaviour
+public abstract class Item : NetworkTransform
 {
     public static List<int> otherItems = new List<int>();
     public ItemType type;
@@ -40,6 +40,7 @@ public abstract class Item : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         if (!Global.connectionManager.items.Contains(this)) Global.connectionManager.mapLoader.RefreshWorldState();
         ItemStart();
+        NetworkTransformID = itemStruct.id; //god dammit that shouldn't be done like that xd
         Initialized = true;
     }
 
@@ -64,28 +65,19 @@ public abstract class Item : MonoBehaviour
         showDevInfo = false;
 
     }
-    private void OnEnable()
+    protected override void OnEnable()
     {
-        Global.connectionManager.RegisterFlagReceiver(Flags.Response.itemData[0], ParseItemTransform);
+        base.OnEnable();
         Global.connectionManager.RegisterFlagReceiver(Flags.Response.itemIntInf[0], ParseItemInteraction);
     }
 
-    private void OnDisable()
+    protected override void OnDisable()
     {
-        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.itemData[0], ParseItemTransform);
+        base.OnDisable();
         Global.connectionManager.UnregisterFlagReceiver(Flags.Response.itemIntInf[0], ParseItemInteraction);
 
     }
 
-    public void ParseItemTransform(Packet packet)
-    {
-        ItemPosData itemPosData = packet.GetJson<ItemPosData>();
-        if (itemPosData == null)
-            return;
-
-        if(itemPosData.id == itemStruct.id)
-            itemStruct.transforms = itemPosData.transforms;
-    }
 
     public void ParseItemInteraction(Packet packet)
     {
@@ -102,8 +94,6 @@ public abstract class Item : MonoBehaviour
     void Start()
     {
        
-
-        
         Global.connectionManager.AddLocalPlayerAction(InternalItemStart);
 
     }
@@ -115,85 +105,13 @@ public abstract class Item : MonoBehaviour
         Global.connectionManager.SendItemInteractionInfo(interactionInfo);
     }
 
-    void Update()
+    protected override void Update()
     {
-        if (Global.connectionManager.client_self.connectedPlayer == null || Initialized==false) return;
+        base.Update();
 
-        if (Global.connectionManager.IsSelfHost)
-        {
-            if (rb.velocity.magnitude > 0.1f)
-                Moved = true;
-
-            lastNetworkTime += Time.deltaTime;
-            if ((lastNetworkTime > 5f || (Moved && lastNetworkTime > 0.2f )) && !PickedUp)
-            {
-                Moved = false;
-
-                lastNetworkTime = 0;
-                if (itemStruct.transforms == null)
-                    itemStruct.transforms = new Transforms();
-                
-                itemStruct.transforms.position = transform.position;
-                itemStruct.transforms.rotation = transform.eulerAngles;
-                itemStruct.transforms.real_velocity = rb.velocity;
-                itemStruct.transforms.real_angular_velocity = rb.angularVelocity;
-                //lastNetworkLocation = transform.position;
-
-                SendItemLocationInfo();
-
-            }
-            else
-            {
-
-                /*
-                if (PickedUp)
-                {
-                    se = true;
-                    falloffTracker = 0;
-                }
-                else
-                {
-                    se = false;
-                    if (falloffTracker > .5f)
-                        falloffHold = false;
-                    else
-                    {
-                        falloffHold = true;
-                        falloffTracker += Time.deltaTime;
-                    }
-                }
-
-                if (!se && !falloffHold)
-                    Tools.UpdatePos(transform, rb, itemStruct.transforms);
-                */
-            }
-
-
-        }
-        else
-        {
-            if (!PickedUp)
-            {
-                Tools.UpdatePos(transform, rb, itemStruct.transforms); 
-            }
-        }
-
+        HoldUpdate = !(Global.connectionManager.client_self.connectedPlayer != null || Initialized != false || PickedUp);
 
     }
 
-    public void SendItemLocationInfo()
-    {
-        Transforms transforms_ = itemStruct.transforms;
-        ItemPosData itemPosData = new ItemPosData();
-        itemPosData.transforms = transforms_;
-        itemPosData.id = itemStruct.id;
 
-
-        string mes = JsonUtility.ToJson(itemPosData);
-        Packet packet = new Packet();
-        packet.header = Headers.data;
-        packet.flag = Flags.Post.itemPos;
-        packet.AddToPayload(mes);
-        packet.Send(Global.connectionManager.udp_handler.client, Global.connectionManager.udp_handler.remoteEndPoint);
-    }
 }

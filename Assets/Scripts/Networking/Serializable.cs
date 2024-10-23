@@ -51,12 +51,40 @@ public class ItemStruct
     public int id;
     [Header("Name should be the same as the filename in Resources")]
     public string name;
-    public Transforms transforms;
     public bool canBeActivated;
     
     //wonder if that will be enough
+    public static implicit operator ItemStruct(NetworkItemStruct item)
+    {
+        ItemStruct itemStruct = new ItemStruct();
+        itemStruct.id = item.id;
+        itemStruct.name = item.name;
+        itemStruct.canBeActivated = item.canBeActivated;
+        return itemStruct;
+    }
+}
+
+[Serializable]
+public class NetworkItemStruct
+{
+
+    public int id;
+    public string name;
+    public Transforms transforms;
+    public bool canBeActivated;
+
+    public static implicit operator NetworkItemStruct(ItemStruct item)
+    {
+        NetworkItemStruct itemStruct = new NetworkItemStruct();
+        itemStruct.id = item.id;
+        itemStruct.name = item.name;
+        itemStruct.canBeActivated = item.canBeActivated;
+        return itemStruct;
+    }
+    //wonder if that will be enough
 
 }
+
 
 [Serializable]
 public class Tooltip

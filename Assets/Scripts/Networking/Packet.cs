@@ -43,7 +43,7 @@ public static class Flags
         public static byte[] playerTransformData = new byte[] { 0xA0 };
         public static byte[] lobbyInfo = new byte[] { 0xA1 };
         public static byte[] worldState = new byte[] { 0xA2 };
-        public static byte[] itemPos = new byte[] { 0xA3 };
+ 
         public static byte[] itemPickup = new byte[] { 0xA5 };
         public static byte[] itemDrop = new byte[] { 0xA6 };
         public static byte[] inventorySwitch = new byte[] { 0xA7 };
@@ -53,6 +53,8 @@ public static class Flags
 
         public static byte[] interactableMessage = new byte[] { 0xAD };
         public static byte[] codeInteractionMessage = new byte[] { 0xAE };
+
+        public static byte[] transform = new byte[] { 0xAF };
 
 
     }
@@ -69,7 +71,7 @@ public static class Flags
         public static byte[] transformData = new byte[] { 0xB0 };
         public static byte[] lobbyInfo = new byte[] { 0x09 };
         public static byte[] worldState = new byte[] { 0xC2 };
-        public static byte[] itemData = new byte[] { 0xC3 };
+
         public static byte[] itemIntInf = new byte[] { 0xC5 };
         public static byte[] itemList = new byte[] { 0xA1 };
         public static byte[] itemPickup = new byte[] { 0xC6 };
@@ -82,6 +84,9 @@ public static class Flags
         
         public static byte[] interactableMessage = new byte[] { 0x0D };
         public static byte[] codeInteractionMessage = new byte[] { 0x0E };
+
+        public static byte[] transform = new byte[] { 0x0F };
+
 
     }
 }
