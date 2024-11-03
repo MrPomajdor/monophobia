@@ -71,7 +71,7 @@ public static class Tools
 [Serializable]
 public class WorldState
 {
-    public List<NetworkItemStruct> items = new List<NetworkItemStruct>();
+    public List<ItemStruct> items = new List<ItemStruct>();
     public List<InteractableState> interactables = new List<InteractableState> ();
     //TODO: Add mobs
 }
@@ -320,7 +320,11 @@ public class ConnectionManager : MonoBehaviour
         Disconnect();
     }
 
- 
+
+    public void ConnectToServer()
+    {
+
+    }
 
     private void OnEnable()
     {
@@ -390,7 +394,57 @@ public class ConnectionManager : MonoBehaviour
             Debug.LogWarning($"Receiver not found for flag {packet.flag[0].ToString("X")}");
         }
 
-        
+        /*
+        //try
+        //{  //TODO: handle all errors for ParseData() inside - do not fucking use a try catch
+        switch (packet.flag[0])
+        {
+            case var _ when packet.flag[0] == Flags.Response.idAssign[0]:
+                ParseIDAssign(packet); done 
+                break;
+            case var _ when packet.flag[0] == Flags.Response.playerList[0]:
+                ParsePlayerList(packet); ? 
+                break;
+            case var _ when packet.flag[0] == Flags.Response.lobbyList[0]:
+                ParseLobbyList(packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.voice[0]:
+                ParseVoiceData(packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.lobbyListChanged[0]:
+                RequestLobbyList(); done
+                break;
+            //-----------------------------JSON DATA-----------------------------
+            case var _ when packet.flag[0] == Flags.Response.lobbyInfo[0]:
+                ParseLobbyInfo(packet);  done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.transformData[0]: //That also syncs up the stats
+                ParseTransformData(packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.worldState[0]:
+                ParseWorldStateData(packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.itemData[0]:
+                ParseItemPosition(packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.itemIntInf[0]:
+                ParseItemInteractionInfo(packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.itemDrop[0]:
+                ParseItemDrop(packet); done 
+                break;
+            case var _ when packet.flag[0] == Flags.Response.itemPickup[0]:
+                ParseItemPickup (packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.inventorySwitch[0]:
+                ParseInventorySwitch(packet); done
+                break;
+            case var _ when packet.flag[0] == Flags.Response.startMap[0]:
+                RemoteMapStart(); 
+                break;
+        }
+        //}catch(Exception e) { Debug.LogError($"{e}"); Debug.Log($"Error parsing packet {packet.header[0]}{packet.header[1]}{packet.flag[0]}{e.StackTrace} "); }
+        */
     }
     #region Assembling and Sending Packets
     public void JoinLobby(int id, string password = "")
@@ -626,11 +680,6 @@ public class ConnectionManager : MonoBehaviour
             }
             yield return null;
         }
-    }
-
-    public bool LocaPlayerInitialized()
-    {
-        return client_self.connectedPlayer != null;
     }
 
     
