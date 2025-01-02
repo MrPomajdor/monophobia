@@ -31,6 +31,10 @@ public class QuickMapNavigation : EditorWindow
         {
             EditorSceneManager.OpenScene("Assets/Maps/lobby0/lobby0.unity");
         }
+        if (GUILayout.Button("Town"))
+        {
+            EditorSceneManager.OpenScene("Assets/Maps/town/town.unity");
+        }
         if (GUILayout.Button("Psychward"))
         {
             EditorSceneManager.OpenScene("Assets/Maps/psychward/psychward.unity");

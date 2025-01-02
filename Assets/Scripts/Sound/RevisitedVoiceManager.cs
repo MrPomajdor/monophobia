@@ -19,16 +19,14 @@ public class RevisitedVoiceManager : MonoBehaviour
     private float timeSinceLastSpeech = 0f;
     private bool isSpeaking = false;
 
-    private OpusEncoder opusEncoder;
-    private OpusDecoder opusDecoder;
+
     private const int sampleRate = 16000;
     private const int channels = 1;
-    private const int frameSize = 320;
-    private const int bitrate = 16000;
 
     List<float> receiveBuffer = new List<float>();
-    public Queue<float[]> micBuffer = new Queue<float[]>();
+    public List<float> micBuffer = new List<float>();
 
+    private int frameSize = (int)(sampleRate * 0.035f)*2;
     //private AudioClip micClip;
     //private int micPosition = 0;
     //private bool isMicActive;
@@ -58,15 +56,17 @@ public class RevisitedVoiceManager : MonoBehaviour
 
             }
 
-            while (micBuffer.Count>0)
+            if(micBuffer.Count>= frameSize)//SoundCompression.encoder.FrameSize)
             {
 
 
                 // Calculate how many samples to process for this time period
-                float[] frame = micBuffer.Dequeue();
-
-                byte[] encodedData = EncodeAudioData(frame);
-                SendVoiceData(encodedData);
+                float[] frame = new float[frameSize];
+                micBuffer.GetRange(0, frameSize).CopyTo(frame);
+                micBuffer.RemoveRange(0, frameSize);
+                Debug.Log($"Got mic data! {frame.Length}");
+                EncodeAudioData(frame);
+                
             }
 
         }
@@ -77,16 +77,12 @@ public class RevisitedVoiceManager : MonoBehaviour
         audioSource = gameObject.GetComponent<AudioSource>();
         if (role == Role.Sender)
         {
-            // Initialize Opus encoder for sending
-            opusEncoder = new OpusEncoder((SamplingRate)sampleRate, (Channels)channels, bitrate, OpusApplicationType.Voip);
             //opusEncoder.Bitrate = bitrate;
             audioSource.clip = Microphone.Start(null, true, 1, sampleRate); // 1 second buffer length
             while (Microphone.GetPosition(null) <= 0) { } // Wait until the microphone starts
         }
         else if (role == Role.Receiver)
         {
-            // Initialize Opus decoder for receiving
-            opusDecoder = new OpusDecoder((SamplingRate)sampleRate, (Channels)channels);
             audioSource.clip = AudioClip.Create("recv", sampleRate * 2, channels, sampleRate, true, OnAudioPlaybackRead);
 
         }
@@ -127,7 +123,7 @@ public class RevisitedVoiceManager : MonoBehaviour
 
         if (isSpeaking)
         {
-            micBuffer.Enqueue(data);
+            micBuffer.AddRange(data);
         }
         
 
@@ -136,18 +132,24 @@ public class RevisitedVoiceManager : MonoBehaviour
     }
 
     // Encodes audio data using POpusCodec
-    private byte[] EncodeAudioData(float[] data)
+    private void EncodeAudioData(float[] data)
     {
-        short[] pcmData = new short[data.Length];
-        for (int i = 0; i < data.Length; i++)
-        {
-            pcmData[i] = (short)(Mathf.Clamp(data[i], -1f, 1f) * short.MaxValue);
-        }
+        Debug.Log("Sending uncompressed audio for compression...");
+        SoundCompression.Encode(data, OnCompressionFinished);
 
-        byte[] encoded = opusEncoder.Encode(pcmData);
-        return encoded;
+    }
+    private void OnCompressionFinished(byte[] data)
+    {
+        Debug.Log("Audio compression finished!");
+        if (currentRole == Role.Sender)
+            SendVoiceData(data);
     }
 
+    private void OnDecompressionFinished(float[] data)
+    {
+        Debug.Log("Finished decompressing");
+        receiveBuffer.AddRange(data);
+    }
 
     private void SendVoiceData(byte[] data)
     {
@@ -159,31 +161,14 @@ public class RevisitedVoiceManager : MonoBehaviour
     {
         if (currentRole == Role.Receiver && encodedData.Length > 0)
         {
-            short[] decodedPcm = new short[frameSize * channels];
-            decodedPcm = opusDecoder.DecodePacket(encodedData);
-
-            float[] pcmData = new float[decodedPcm.Length];
-            for (int i = 0; i < decodedPcm.Length; i++)
-            {
-                pcmData[i] = decodedPcm[i] / (float)short.MaxValue;
-            }
-
-            receiveBuffer.AddRange(pcmData);
+            Debug.Log("Decoding voice data");
+            SoundCompression.Decode(encodedData, OnDecompressionFinished);
 
         }
     }
 
     private void OnDestroy()
     {
-        if (opusEncoder != null)
-        {
-            opusEncoder.Dispose();
-        }
-        if (opusDecoder != null)
-        {
-            opusDecoder.Dispose();
-        }
-
         if (Microphone.IsRecording(null))
         {
             Microphone.End(null);
@@ -215,6 +200,7 @@ public class RevisitedVoiceManager : MonoBehaviour
         if (player_id == owner.playerInfo.id)
             return;
 
+        Debug.Log("Received voice data");
         ReceiveVoiceData(_pay);
 
 

@@ -43,7 +43,7 @@ public abstract class Item : NetworkTransform
         NetworkTransformID = itemStruct.id; //god dammit that shouldn't be done like that xd
         Initialized = true;
     }
-
+    /*
     private void OnGUI()
     {
         if (!showDevInfo) return;
@@ -53,7 +53,7 @@ public abstract class Item : NetworkTransform
         style.normal.textColor = Color.green;
 
         GUI.Label(new Rect(Screen.width / 2, Screen.height / 2, 500, 1000), $"ID : {itemStruct.id}\nName : {itemStruct.name}");
-    }
+    }*/
 
     private void OnMouseEnter()
     {

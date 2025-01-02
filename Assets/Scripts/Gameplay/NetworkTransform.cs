@@ -3,8 +3,9 @@ using UnityEngine;
 public abstract class NetworkTransform : MonoBehaviour
 {
     private Rigidbody NetworkRb;
+    public float maxVelDiff = 15f;
     public Transforms NetworkTransforms { get; private set; } = new Transforms();
-    private Transforms NetworkTransformsLast = new Transforms();
+    public Transforms NetworkTransformsLast { get; private set; } = new Transforms();
 
     //This ID is currently set manually by the inherited class. Should change in future.
     //TODO : MakeNetworkTransformID somehow set the ID automatilcly or think of a better method.
@@ -37,7 +38,11 @@ public abstract class NetworkTransform : MonoBehaviour
             return;
 
         if (itemPosData.id == NetworkTransformID)
+        {
             NetworkTransforms = itemPosData.transforms;
+            lastUpdateTime = 0;
+        }
+        
     }
     private bool VecEq(Vector3 v1, Vector3 v2)
     {
@@ -61,6 +66,7 @@ public abstract class NetworkTransform : MonoBehaviour
         NetworkTransformsLast.real_velocity = NetworkTransforms.real_velocity;
         NetworkTransformsLast.real_angular_velocity = NetworkTransforms.real_angular_velocity;
     }
+    float vel_dif;
     protected virtual void Update()
     {
         if (!Global.connectionManager.LocaPlayerInitialized()) return;
@@ -73,16 +79,20 @@ public abstract class NetworkTransform : MonoBehaviour
             NetworkTransforms.real_angular_velocity = NetworkRb.angularVelocity;
             lastUpdateTime += Time.deltaTime;
             //if (NetworkTransformsLast == null) NetworkTransformsLast = NetworkTransforms;
-            if ((lastUpdateTime >= updateInterval || lastUpdateTime>5 ) && !HoldUpdate)
-            {
-                if (!CompareTransforms(NetworkTransformsLast, NetworkTransforms) || lastUpdateTime>5)
+
+            Vector3 curr_vel = NetworkRb.velocity;
+            vel_dif = Mathf.Abs((curr_vel - NetworkTransformsLast.real_velocity).magnitude / Time.fixedDeltaTime);
+
+            //if ((lastUpdateTime >= updateInterval || lastUpdateTime>5 ) && !HoldUpdate)
+            //{
+                if (((vel_dif>maxVelDiff && lastUpdateTime>0.2f) || lastUpdateTime>5) && !HoldUpdate)
                 {
                     CopyToLast();
                     SendItemLocationInfo();
 
                     lastUpdateTime = 0;
                 }
-            }
+            //}
         }
         else
         {
@@ -90,6 +100,7 @@ public abstract class NetworkTransform : MonoBehaviour
             {
                 //Debug.Log("PIZDA");
                 //NetworkTransformsLast = NetworkTransforms;
+                lastUpdateTime += Time.deltaTime;
                 Tools.UpdatePos(transform, NetworkRb, NetworkTransforms);
             }
         }
@@ -102,7 +113,6 @@ public abstract class NetworkTransform : MonoBehaviour
             Debug.LogError($"NetworkTransformID has not been set for {name}");
             return;
         }
-        Debug.Log($"Sending pos data from {NetworkTransformID}");
         ItemPosData tranformData = new ItemPosData();
         tranformData.transforms = NetworkTransforms;
         tranformData.id = NetworkTransformID;
@@ -115,5 +125,19 @@ public abstract class NetworkTransform : MonoBehaviour
         packet.flag = Flags.Post.transform;
         packet.AddToPayload(mes);
         packet.Send(Global.connectionManager.udp_handler.client, Global.connectionManager.udp_handler.remoteEndPoint);
+    }
+    GUIStyle labelStyle = new GUIStyle();
+    void OnGUI()
+    {
+        string t = $"{lastUpdateTime.ToString("F2")}\n{vel_dif.ToString("F3")}";
+        Vector3 p = NetworkRb.transform.position;
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(p);
+        Vector2 textSize = GUI.skin.label.CalcSize(new GUIContent(t));
+        
+        labelStyle.fontSize = 38;
+        labelStyle.normal.textColor = new Color(1 - Mathf.Clamp(lastUpdateTime, 0, 3), Mathf.Clamp(lastUpdateTime, 0, 5), 0);
+
+        GUI.Label(new Rect(screenPos.x, Screen.height - screenPos.y, textSize.x, textSize.y), t, labelStyle);
+
     }
 }

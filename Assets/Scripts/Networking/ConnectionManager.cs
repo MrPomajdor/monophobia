@@ -13,6 +13,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+using UnityEngine.XR;
 
 public static class Global
 {
@@ -104,9 +105,13 @@ public class ConnectionManager : MonoBehaviour
     [SerializeField]
     private Dictionary<byte, List<Action<Packet>>> ReceiversMap = new Dictionary<byte, List<Action<Packet>>>(); //looks wierd xd
 
+    private Dictionary<string,bool> fragmentsReceivedMap = new Dictionary<string,bool>();
 
+    private Defragmentator defragmentator = new Defragmentator();
+
+    private string AppVersion;
     private Queue<Action> LocalPlayerActions = new Queue<Action>();
-
+    //public MumbleManager mumbleManager { get; private set; }
 
     /// <summary>Adds an action to received flag</summary>
     /// <param name="action">The action to be executed</param>
@@ -211,7 +216,7 @@ public class ConnectionManager : MonoBehaviour
     //29.03.2024 brecause I forgot to dispose and stop everything related to networking I lost my mind.
     //I almost fucking exploded trying to find why when I enter play mode couple of times my cpu starts to fucking burn extra calories
     //(udp handler was creating a THREAD with a WHILE (TRUE) loop that I didn't stop anywhere ;-;)
-    //note to self: don't code like an 8th grader you piece of dogshit.
+    //note to self: don't code like an 8th grader
     private void Disconnect()
     {
         if (socket != null && socket.Connected)
@@ -260,7 +265,7 @@ public class ConnectionManager : MonoBehaviour
             return;
         }
         Debug.Log("Connected!");
-        
+        //socket.NoDelay = true;
         connected = true;
         
         //Debug.Log("Starting watchdog");
@@ -281,7 +286,10 @@ public class ConnectionManager : MonoBehaviour
         ThreadManager.ExecuteOnMainThread(()=>{ menuManager.ChangeMenu("main"); });
         
     }
+    private void ReceiveTCP()
+    {
 
+    }
     private void ReceiveCallback(IAsyncResult asyncResult)
     {
         if (!socket.Connected)
@@ -295,11 +303,44 @@ public class ConnectionManager : MonoBehaviour
                 Debug.Log("Disconnected!");
                 return;
             }
-            // Transfer data from receiveBuffer to data variable for handling
+            if (byteLength < 7)
+            {
+                Debug.LogWarning($"Message length too short! Content:\n{BitConverter.ToString(recvBuffer)}");
+
+            }
+
             byte[] data = new byte[byteLength];
             Array.Copy(recvBuffer, data, byteLength);
 
-            HandleData(data);
+            int msgLenth = BitConverter.ToInt32(data, 3);
+            if (msgLenth > dataBufferSize)
+            {
+                Debug.Log($"Total len of message {msgLenth}");
+                byte[] buffer = new byte[msgLenth];
+                Array.Copy(data, 0, buffer, 0, byteLength);
+
+                int totalRead = byteLength;
+                int toRead = msgLenth - byteLength;
+
+                while (toRead > 0)
+                {
+                    int chunkSize = Math.Min(toRead, dataBufferSize);
+                    int bytesRead = stream.Read(recvBuffer, 0, chunkSize);
+
+                    if (bytesRead <= 0) throw new IOException("Connection lost during message read.");
+
+                    Array.Copy(recvBuffer, 0, buffer, totalRead, bytesRead);
+                    totalRead += bytesRead;
+                    toRead -= bytesRead;
+                }
+
+                Debug.Log($"Read full message of size {buffer.Length}");
+                HandleData(buffer);
+            }
+            else
+            {
+                HandleData(data);
+            }
 
             stream.BeginRead(recvBuffer, 0, dataBufferSize, ReceiveCallback, null);
         }
@@ -325,6 +366,8 @@ public class ConnectionManager : MonoBehaviour
     private void OnEnable()
     {
         Global.connectionManager = this;
+        AppVersion = Application.version;
+       // mumbleManager = GetComponent<MumbleManager>(); 
         StartCoroutine(WaitForLocalPlayer());
     }
 
@@ -350,7 +393,7 @@ public class ConnectionManager : MonoBehaviour
 
         udp_handler = FindObjectOfType<UDPHandler>();
         mapLoader = FindObjectOfType<MapLoader>();
-
+        
         parser.RegisterHeaderProcessor(Headers.ack, ParseACK);
         parser.RegisterHeaderProcessor(Headers.echo, ParseECHO);
         parser.RegisterHeaderProcessor(Headers.hello, HelloFromServer);
@@ -360,16 +403,31 @@ public class ConnectionManager : MonoBehaviour
 
         RegisterFlagReceiver(Flags.Response.idAssign[0], ParseIDAssign);
         RegisterFlagReceiver(Flags.Response.lobbyListChanged[0], RequestLobbyList);
+        RegisterFlagReceiver(Flags.Response.frag_received[0], FragReceivedPacket);
 
         client_self.name = $"{SteamFriends.GetPersonaName()}";
         ThreadManager.ExecuteOnMainThread(() => { menuManager.ChangeMenu("connecting"); });
+        
         Connect(IPAddress.Parse(_IPAddress));
     }
 
 
     public void HandleData(byte[] _data)
     {
-        parser.DigestMessage(_data);
+        if (_data.Take(4).SequenceEqual(Fragmentator.FCHHeader) || _data.Take(4).SequenceEqual(Fragmentator.FInitHeader))
+        {
+            Debug.Log("Got fragmented packet!");
+            FragmentedPacket res = defragmentator.PushData(_data);
+            if(res.isDone)
+            {
+                Debug.Log("Digested fragmented packet");
+                parser.DigestMessage(res.payload);
+            }
+        }
+        else
+        {
+            parser.DigestMessage(_data);
+        }
     }
 
 
@@ -387,7 +445,7 @@ public class ConnectionManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"Receiver not found for flag {packet.flag[0].ToString("X")}");
+            Debug.LogWarning($"Receiver not found for flag {packet.flag[0].ToString("X")}\n{BitConverter.ToString(packet.payload)}");
         }
 
         
@@ -458,7 +516,7 @@ public class ConnectionManager : MonoBehaviour
         packet.header = Headers.data;
         packet.flag = Flags.Post.worldState;
         packet.AddToPayload(mes);
-        packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
+        packet.Send(stream);
     }
     #endregion
 
@@ -562,7 +620,8 @@ public class ConnectionManager : MonoBehaviour
         Packet hello = new Packet();
         hello.header = Headers.hello;
         hello.flag = Flags.none;
-        hello.AddToPayload(client_self.name); //TODO: Set up player name choosing system (add to packets!!!)
+        hello.AddToPayload(client_self.name);
+        hello.AddToPayload(AppVersion);
         hello.Send(stream);
 
         RequestLobbyList(packet);
@@ -633,6 +692,53 @@ public class ConnectionManager : MonoBehaviour
         return client_self.connectedPlayer != null;
     }
 
+    public void SendFragmented(FragmentedPacket fragmentedPacket)
+    {
+        fragmentsReceivedMap.Add(fragmentedPacket.hash,false);
+        Debug.Log($"Added hashmap entry for {fragmentedPacket.hash}");
+        StartCoroutine(SendFragmentedData(fragmentedPacket));
+    }
+
+    private void FragReceivedPacket(Packet packet)
+    {
+        using (MemoryStream _stream = new MemoryStream(packet.payload))
+        using (BinaryReader reader = new BinaryReader(_stream))
+        {
+            string hash = Encoding.UTF8.GetString(reader.ReadBytes(packet.payload.Length));
+            if (fragmentsReceivedMap.ContainsKey(hash))
+                fragmentsReceivedMap[hash] = true;
+
+            else
+                fragmentsReceivedMap.Add(hash, true);
+            Debug.Log($"XDDDD for {hash}");
+        }
+    }
+    IEnumerator SendFragmentedData(FragmentedPacket fragmentedPacket)
+    {
+        if (!fragmentsReceivedMap.ContainsKey(fragmentedPacket.hash))
+        {
+            Debug.LogError($"Hash {fragmentedPacket.hash} does not exist in hash-hashmap for sending framgented packets!");
+        }
+        int index = 1;
+        stream.BeginWrite(fragmentedPacket.chunks[0], 0, fragmentedPacket.chunks[0].Length, null, null); // send the initial packet
+        while (true)
+        {
+            if(fragmentsReceivedMap[fragmentedPacket.hash])
+            {
+
+                stream.BeginWrite(fragmentedPacket.chunks[index], 0, fragmentedPacket.chunks[index].Length, null, null);
+                fragmentsReceivedMap[fragmentedPacket.hash] = false;
+                if (index + 1 >= fragmentedPacket.chunks.Count)
+                    break;
+                index ++; 
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
+            yield return null;
+        }
+    }
     
 }
 

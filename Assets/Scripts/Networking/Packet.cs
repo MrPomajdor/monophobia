@@ -7,6 +7,7 @@ using System.Text;
 using UnityEngine;
 using System.IO;
 using System.Net;
+using System.Threading;
 
 public enum Protocol
 {
@@ -87,6 +88,9 @@ public static class Flags
 
         public static byte[] transform = new byte[] { 0x0F };
 
+        public static byte[] frag_received = new byte[] { 0xDF };
+
+
 
     }
 }
@@ -125,6 +129,9 @@ public class Packet
                 // Read the flag (1 byte)
                 flag = reader.ReadBytes(1);
 
+                int lenn = reader.ReadInt32();
+
+
                 if (data.Length > 3)
                 {
                     // Read the payload (the rest of the bytes)
@@ -142,6 +149,17 @@ public class Packet
             Debug.LogError(e);
         }
     }
+    private void WriteFragments(NetworkStream stream, List<byte[]> fragments)
+    {
+        foreach (byte[] fragment in fragments)
+        {
+            //WriteFragment(stream, fragment);
+            stream.Write(fragment, 0, fragment.Length);
+            stream.Flush();
+            Thread.Sleep(20);
+
+        }
+    }
     public void Send(NetworkStream stream)
     {
         try
@@ -153,8 +171,15 @@ public class Packet
                 Debug.LogError("Packet buffer is null! Cannot send.");
                 return;
             }
-
-            stream.BeginWrite(buf, 0, buf.Length, null, null);
+            if (false)//(buf.Length > 512 * 3)
+            {
+                Debug.LogWarning("Sending fragmented packet");
+                FragmentedPacket fragmentedPacket = Fragmentator.Fragment(buf);
+                Global.connectionManager.SendFragmented(fragmentedPacket);
+                
+            }
+            else
+                stream.BeginWrite(buf, 0, buf.Length, null, null);
         }
         catch (Exception e)
         {
@@ -277,9 +302,11 @@ public class PacketParser
         MemoryStream memoryStream = new MemoryStream();
         using (BinaryWriter writer = new BinaryWriter(memoryStream))
         {
+            
             writer.Write(header);
             writer.Write(flag);
-            if(payload.Length > 0)
+            writer.Write(payload.Length + 7); // header 2 bytes + flag 1 byte + 4 bytes msg len
+            if (payload.Length > 0)
                 writer.Write(payload);
         }
         return memoryStream.ToArray();

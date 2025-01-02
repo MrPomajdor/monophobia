@@ -107,6 +107,50 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &2253459913659806022
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8763967782649943978}
+  - component: {fileID: 7204630660311508648}
+  m_Layer: 0
+  m_Name: VoIP
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8763967782649943978
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2253459913659806022}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7127683235744842816}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7204630660311508648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2253459913659806022}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a07c24c9ec85a9468a87d5d424a472e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2602772504953550706
 GameObject:
   m_ObjectHideFlags: 0
@@ -820,7 +864,7 @@ GameObject:
   - component: {fileID: 1389488555766624092}
   m_Layer: 0
   m_Name: Camera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1128,6 +1172,7 @@ Transform:
   - {fileID: 7127683236634418117}
   - {fileID: 6026785890613931666}
   - {fileID: 5325885581705706534}
+  - {fileID: 8763967782649943978}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7127683235744842815
@@ -1156,8 +1201,8 @@ MonoBehaviour:
   transforms:
     position: {x: 0, y: 0, z: 0}
     rotation: {x: 0, y: 0, z: 0}
-    target_velocity: {x: 0, y: 0, z: 0}
     real_velocity: {x: 0, y: 0, z: 0}
+    real_angular_velocity: {x: 0, y: 0, z: 0}
   lastTime: 0
   <voice>k__BackingField: {fileID: 5540899609716941165}
   m_debug: 1
@@ -1406,6 +1451,7 @@ MonoBehaviour:
   audioSource: {fileID: 38896152851592566}
   voiceThreshold: 0.01
   silenceDuration: 0.5
+  micBuffer: []
 --- !u!114 &4510345675070292442
 MonoBehaviour:
   m_ObjectHideFlags: 0

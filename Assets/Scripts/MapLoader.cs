@@ -43,8 +43,9 @@ public class MapLoader : MonoBehaviour
         else
             UpdateMap(lobbyInfo);
 
-
-
+        //We assume this channel always exists because the server should create it when creating lobby.
+        //Also the server should only allow players that are in a lobby to join this channel
+       // Global.connectionManager.mumbleManager.JoinChannel(lobbyInfo.lobbyName);
 
 
     }
@@ -251,6 +252,10 @@ public class MapLoader : MonoBehaviour
 
                 Item itemObjectScript = itemObject.GetComponent<Item>();
                 itemObjectScript.itemStruct.id = item.id;
+                itemObjectScript.NetworkTransforms.position = item.transforms.position;
+                itemObjectScript.NetworkTransforms.rotation = item.transforms.rotation;
+                itemObjectScript.NetworkTransforms.real_velocity = item.transforms.real_velocity;
+                itemObjectScript.NetworkTransforms.real_angular_velocity = item.transforms.real_angular_velocity;
 
                 itemObject.transform.position = item.transforms.position;
                 itemObject.transform.eulerAngles = item.transforms.rotation;
