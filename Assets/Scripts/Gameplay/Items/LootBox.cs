@@ -6,15 +6,10 @@ public class LootBox : Interactable
 {
     public List<string> LootNames = new List<string>();
 
-    public override void Initialize()
+    public override void Interact(Player interactee)
     {
-        
-    }
-
-    public override void Interact(Player interactee, string message = "")
-    {
-        if(State.used) return;
-        State.used = true;
+        //if(State.used) return;
+        //State.used = true;
 
         if (!interactee.playerInfo.isHost) return;
         

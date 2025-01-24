@@ -5,7 +5,7 @@ using UnityEngine;
 public class Test : Interactable
 {
 
-    public override void Interact(Player interactee, string message)
+    public override void Interact(Player interactee)
     {
         /*
          * if interactee is local then
@@ -18,10 +18,6 @@ public class Test : Interactable
         Debug.Log("Interacted");
     }
 
-    public override void Initialize()
-    {
-       
-    }
 
     // Start is called before the first frame update
     void Start()

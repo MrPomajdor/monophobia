@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Maps/psychward/psychward.unity
     guid: 58772a27672ffca4ca8b247ecc00f0ac
+  - enabled: 1
+    path: Assets/Maps/town/town.unity
+    guid: 4e5780a456b2ac543a1832db142865d8
   m_configObjects: {}

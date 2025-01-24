@@ -55,6 +55,9 @@ public static class Flags
         public static byte[] interactableMessage = new byte[] { 0xAD };
         public static byte[] codeInteractionMessage = new byte[] { 0xAE };
 
+        public static byte[] NetworkVarSync = new byte[] { 0xBE };
+
+
         public static byte[] transform = new byte[] { 0xAF };
 
 
@@ -89,6 +92,9 @@ public static class Flags
         public static byte[] transform = new byte[] { 0x0F };
 
         public static byte[] frag_received = new byte[] { 0xDF };
+
+        public static byte[] NetworkVarSync = new byte[] { 0xEE };
+
 
 
 

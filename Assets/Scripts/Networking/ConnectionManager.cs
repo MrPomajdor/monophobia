@@ -73,7 +73,7 @@ public static class Tools
 public class WorldState
 {
     public List<NetworkItemStruct> items = new List<NetworkItemStruct>();
-    public List<InteractableState> interactables = new List<InteractableState> ();
+    //public List<InteractableState> interactables = new List<InteractableState> ();
     //TODO: Add mobs
 }
 

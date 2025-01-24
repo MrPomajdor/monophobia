@@ -54,6 +54,7 @@ public class Mob : MonoBehaviour
             {
                 t_tic = 0;
                 BrainTick();
+                Dupa();
             }
             
         }
@@ -61,6 +62,14 @@ public class Mob : MonoBehaviour
         {
 
         }
+    }
+
+    //Autor: Mateusz Olszewski
+    public void Dupa()
+    {
+
+
+        print("witamn");
     }
 
     public void BrainTick()

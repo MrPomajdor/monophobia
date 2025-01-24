@@ -49,7 +49,7 @@ public class ItemInteraction : MonoBehaviour
                 if (hit.collider == null) return;
                 
                 if(hit.collider.gameObject.GetComponent<Interactable>()) {
-                    hit.collider.gameObject.GetComponent<Interactable>().InternalInteract(SelfPlayer);
+                    hit.collider.gameObject.GetComponent<Interactable>().Interact(SelfPlayer);
                 }
                 
                 else if (hit.collider.gameObject.GetComponent<Item>())
