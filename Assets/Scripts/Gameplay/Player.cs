@@ -31,6 +31,7 @@ public class Player : MonoBehaviour
         sfxManager = GetComponent<SoundEffectsManager>();
         footsteps = GetComponent<FootstepsSFX>();
         inventoryManager = GetComponent<InventoryManager>();
+        NonUIInput.ForceBlock = false;
     }
     Vector3 prev, prevrot;
     // Update is called once per frame
@@ -44,37 +45,45 @@ public class Player : MonoBehaviour
 
         style.fontSize = 25;
         style.normal.textColor = Color.green;
-        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {Global.connectionManager.client_self.name}\nServer ip: {Global.connectionManager._IPAddress}\n\nMIC VOL: {voice.LastMicVolume}\nMIC ACTIVE: {voice.MicActive}\nMIC BUF LEN: {voice.micBuffer.Count}", style);
+        GUI.Label(new Rect(10, 10, 500, 1000), $"Local Player ID: {playerInfo.id}\nName: {Global.connectionManager.client_self.name}\nServer ip: {Global.connectionManager._IPAddress}\nPing: {Global.connectionManager.Ping*1000}ms\n\nMIC VOL: {voice.LastMicVolume}\nMIC ACTIVE: {voice.MicActive}\nMIC BUF LEN: {voice.micBuffer.Count}", style);
     }
     float t;
 
     private void OnEnable()
     {
-        Global.connectionManager.RegisterFlagReceiver(Flags.Response.transformData[0], ParseTransformData);
+        Global.connectionManager.RegisterFlagReceiver(Flags.Response.playerTransforms[0], ParseTransformData);
     }
     private void OnDisable()
     {
-        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.transformData[0], ParseTransformData);
+        Global.connectionManager.UnregisterFlagReceiver(Flags.Response.playerTransforms[0], ParseTransformData);
     }
 
     public void ParseTransformData(Packet packet)
     {
-        PlayersDataPacket json_ = packet.GetJson<PlayersDataPacket>();
+        IncomingPlayerData data = new IncomingPlayerData();
+        if (!packet.GetFromPayload(data))
+            return;
 
         
-        foreach (PlayerData player in json_.players) // for each player in recieved json
+        foreach (PlayerData player in data.players) 
         {
 
             if (player.id == Global.connectionManager.client_self.id)
+            {
+                if (Vector3.Distance(player.transforms.position, transform.position) > 1.5f)
+                    transform.position = player.transforms.position;
                 continue;
+            }
+
+                
             if (player.id == playerInfo.id)
             {
                 transforms = player.transforms;
                 lastTime = Time.realtimeSinceStartup;
                 movement.col.height = player.inputs.isCrouching ? 0.8f : 2f;
                 inputs = player.inputs;
-                stats.sanity = player.stats.sanity;
-                stats.alcohol = player.stats.alcohol;
+                //stats.sanity = player.stats.sanity;
+                //stats.alcohol = player.stats.alcohol;
                 break;
             }
         }
@@ -143,16 +152,20 @@ public class Player : MonoBehaviour
         transforms_.rotation = movement.GetAngles();
 
 
-        PlayerData playerData = new PlayerData();
-        playerData.inputs = inputs;
-        playerData.id = playerInfo.id;
-        playerData.transforms = transforms;
+        PlayerData playerData = new()
+        {
+            inputs = inputs,
+            id = playerInfo.id,
+            transforms = transforms_
+        };
 
-        string mes = JsonUtility.ToJson(playerData);
+        //playerData.inputs.isMoving = true;
+
+
         Packet packet = new Packet();
         packet.header = Headers.data;
         packet.flag = Flags.Post.playerTransformData;
-        packet.AddToPayload(mes);
+        packet.AddSerializable(playerData);
         packet.Send(Global.connectionManager.udp_handler.client, Global.connectionManager.udp_handler.remoteEndPoint);
     }
 

@@ -5,9 +5,12 @@ using UnityEngine.EventSystems;
 
 public class SideInput : StandaloneInputModule
 {
+    public AudioSource ClickSoundSource;
+    public AudioClip ClickClip;
     public void ClickAt(Vector2 pos, bool pressed)
     {
-        Debug.Log($"Clicking at {pos}");
+        if(pressed) 
+            ClickSoundSource.PlayOneShot(ClickClip);
         Input.simulateMouseWithTouches = true;
         var pointerData = GetTouchPointerEventData(new Touch()
         {
@@ -15,5 +18,8 @@ public class SideInput : StandaloneInputModule
         }, out bool b, out bool bb);
 
         ProcessTouchPress(pointerData, pressed, !pressed);
+        
     }
+
+
 }

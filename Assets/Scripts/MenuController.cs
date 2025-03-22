@@ -24,7 +24,7 @@ public class MenuController : MonoBehaviour
     void Update()
     {
        
-        if(Input.GetKeyDown(KeyCode.Escape)) {
+        if(NonUIInput.GetKeyDown(KeyCode.Escape)) {
             menuVisible = !menuVisible;
 
             if(menuVisible)

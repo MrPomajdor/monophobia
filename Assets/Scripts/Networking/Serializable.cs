@@ -14,8 +14,35 @@ public class PlayerInfo
     public string skin;
     public bool isHost;
     public bool isLocal;
+    public bool isMonster;
+    public MonsterData monsterData;
     //TODO: public int health;
     //TODO: public int sanity;
+
+}
+
+
+[Serializable]
+public class NetworkPlayerInfo
+{
+    public int id;
+    public string name;
+    public string[] cosmetics;
+    public string skin;
+    public bool isMonster;
+    public bool isHost;
+
+    public PlayerInfo ToPlayerInfo()
+    {
+        PlayerInfo info = new PlayerInfo();
+        info.name = name;
+        info.id = id;
+        info.skin = skin;
+        info.isMonster = isMonster;
+        info.isHost = isHost;
+        info.cosmetics = cosmetics;
+        return info;
+    }
 
 }
 [Serializable]
@@ -101,8 +128,8 @@ public class LobbyInfo
     public string lobbyName;
     public string mapName = "grid0";
     public int time = 300;
-    public MiscSettings miscSettings;
-    public PlayerInfo[] players;
+    //public MiscSettings miscSettings;
+    public NetworkPlayerInfo[] players;
        
 
 }
@@ -113,4 +140,11 @@ public class InteractionInfo
     public int PlayerID;
     public int InteractableID;
     public string InteractionMessage;
+}
+
+
+[Serializable]
+public class MonsterDataSerialized
+{
+    public string CodeName;
 }

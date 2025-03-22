@@ -90,8 +90,8 @@ public class Movement : MonoBehaviour
 
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, fov, Time.deltaTime * 10);
         isGrounded = Physics.Raycast(transform.position, Vector3.down, GroundCheckHeight);
-        horMovement = Input.GetAxisRaw("Horizontal");
-        vertMovement = Input.GetAxisRaw("Vertical");
+        horMovement = NonUIInput.GetAxisRaw("Horizontal");
+        vertMovement = NonUIInput.GetAxisRaw("Vertical");
 
         moveDirection = mouse.transform.forward * vertMovement + mouse.transform.right * horMovement;
         moveDirection = new Vector3(moveDirection.x, 0, moveDirection.z);
@@ -111,7 +111,7 @@ public class Movement : MonoBehaviour
         }
         else
             sw = false;
-        if (Input.GetKey(KeyCode.LeftShift))
+        if (NonUIInput.GetKey(KeyCode.LeftShift))
         {
 
             add = sprintAdd * 1000;
@@ -127,7 +127,7 @@ public class Movement : MonoBehaviour
 
         }
 
-        if (Input.GetKey(KeyCode.LeftControl))
+        if (NonUIInput.GetKey(KeyCode.LeftControl))
         {
             col.height = 0.8f;
             isCrouching = true;
@@ -139,7 +139,7 @@ public class Movement : MonoBehaviour
 
         }
 
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        if (NonUIInput.GetKeyDown(KeyCode.Space) && isGrounded)
         {
             rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
         }

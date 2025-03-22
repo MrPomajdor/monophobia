@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using Unity.Mathematics;
 public class MouseRotation : MonoBehaviour
 {
     public float speedH = 2.0f;
@@ -29,14 +29,19 @@ public class MouseRotation : MonoBehaviour
     public float LerpSpeed=18;
     Vector3 xx;
     GameObject pinPoint;
+    public Feelings feelings;
+    
     private void Start()
     {
     }
+
     void Update()
     {
 
-        //camera tilt when strafing.
-        Vector3 tilt = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, -Input.GetAxisRaw("Horizontal") * CameraTiltForce);
+        //camera tilt when strafing + breathing when stamina is low
+        
+        
+        Vector3 tilt = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, -NonUIInput.GetAxisRaw("Horizontal") * CameraTiltForce);
 
         //lerping view bobbing and camera tilt
         xx = Vector3.Lerp(xx, tilt, Time.deltaTime * LerpSpeed);
@@ -45,9 +50,9 @@ public class MouseRotation : MonoBehaviour
         else
             drunkWalking = false;
 
-        yaw += speedH * Input.GetAxis("Mouse X");
+        yaw += speedH * NonUIInput.GetAxis("Mouse X");
 
-        pitch -= speedV * Input.GetAxis("Mouse Y");
+        pitch -= speedV * NonUIInput.GetAxis("Mouse Y");
         
 
         if (pitch >= maxPitch)
@@ -83,19 +88,11 @@ public class MouseRotation : MonoBehaviour
         else
         {
             transform.root.eulerAngles = new Vector3(transform.root.eulerAngles.x, yaw, 0);// + rotAdd;
-            transform.eulerAngles = new Vector3(pitch, transform.eulerAngles.y, xx.z);
+            transform.eulerAngles = new Vector3(pitch + feelings.BreathFunction * (1 - feelings.Stamina), transform.eulerAngles.y, xx.z);
 
         }
     }
 
-    IEnumerator drunkMovement()
-    {
-        drunkWalking = true;
-        yield return new WaitForSeconds(Random.Range(1, Mathf.Clamp(stats.alcohol * 10, 1, 2)));
-        yield return new WaitForSeconds(Random.Range(0, 3 - Mathf.Clamp(stats.alcohol * 5, 0, 4)));
-        drunkWalking = false;
-
-    }
 }
 
 

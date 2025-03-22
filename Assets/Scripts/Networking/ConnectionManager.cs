@@ -7,30 +7,29 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Text;
-using Unity.VisualScripting;
+#if UNITY_EDITOR
+using UnityEditor.Sprites;
+#endif
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.UIElements;
-using UnityEngine.XR;
 
 public static class Global
 {
     public static ConnectionManager connectionManager;
-    
+    public static Chat chat;
+
 }
 public static class Tools
 {
     public static void UpdatePos(Transform transform, Rigidbody rb, Transforms transforms, Player player = null, Inputs inputs = null, float smoothingFactor = 0.5f)
     {
-        
+
         //Velocity
         rb.velocity = transforms.real_velocity;
         rb.velocity += transforms.position - transform.position;
 
         //angular velocity
-        
+
 
         //position
         if (Vector3.Distance(transform.position, transforms.position) > 2)
@@ -41,11 +40,11 @@ public static class Tools
             float rot_diff = Quaternion.Angle(transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z));
             if (rot_diff > 10)
                 transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z), smoothingFactor * Time.deltaTime);
-            if(rot_diff > 25)
+            if (rot_diff > 25)
                 transform.rotation = Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z);
             //else
             //{
-            
+
             //    rb.angularVelocity += transform.rotation.eulerAngles - transforms.rotation;
             //}
             //    transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, transforms.rotation.z), smoothingFactor * Time.deltaTime);
@@ -56,7 +55,7 @@ public static class Tools
             player.cam.transform.rotation = Quaternion.Slerp(player.cam.transform.rotation, Quaternion.Euler(transforms.rotation.x, transforms.rotation.y, 0), smoothingFactor * Time.deltaTime);
             rb.AddForce(inputs.MoveDirection * 500 * Time.deltaTime, ForceMode.Force);
         }
-       
+
     }
 
     public static bool Difference(Transforms a, Transforms b)
@@ -86,7 +85,7 @@ public class ConnectionManager : MonoBehaviour
     public string _IPAddress = "127.0.0.1";
     public PacketParser parser;
     private TcpClient socket;
-    public NetworkStream stream {  get; private set; }
+    public NetworkStream stream { get; private set; }
     private byte[] recvBuffer;
     public static int dataBufferSize = 1024;
     public bool connected;
@@ -102,22 +101,26 @@ public class ConnectionManager : MonoBehaviour
     private MenuManager menuManager;
     public MapLoader mapLoader;
 
-    [SerializeField]
-    private Dictionary<byte, List<Action<Packet>>> ReceiversMap = new Dictionary<byte, List<Action<Packet>>>(); //looks wierd xd
 
-    private Dictionary<string,bool> fragmentsReceivedMap = new Dictionary<string,bool>();
+    private Dictionary<byte, List<Action<Packet>>> ReceiversMap = new Dictionary<byte, List<Action<Packet>>>(); //looks wierd xd
+    private Dictionary<byte[], Action<Packet>> PacketResponseCallbackMap = new Dictionary<byte[], Action<Packet>>();
+
+    private Dictionary<string, bool> fragmentsReceivedMap = new Dictionary<string, bool>();
 
     private Defragmentator defragmentator = new Defragmentator();
 
     private string AppVersion;
     private Queue<Action> LocalPlayerActions = new Queue<Action>();
+
+    private float lastEchoTime;
+    public float Ping { get; private set; }
     //public MumbleManager mumbleManager { get; private set; }
 
     /// <summary>Adds an action to received flag</summary>
     /// <param name="action">The action to be executed</param>
     /// <param name="flag">corresponding flag</param>
-    public void RegisterFlagReceiver(byte flag,Action<Packet> action)
-    { 
+    public void RegisterFlagReceiver(byte flag, Action<Packet> action)
+    {
 
         //Debug.Log($"Registering action for flag {flag.ToString("X")} ");
         if (ReceiversMap.ContainsKey(flag))
@@ -134,8 +137,8 @@ public class ConnectionManager : MonoBehaviour
     /// <param name="flag">corresponding flag</param>
     public void UnregisterFlagReceiver(byte flag, Action<Packet> action)
     {
-        if(ReceiversMap.ContainsKey(flag))
-            if(ReceiversMap[flag].Contains(action))
+        if (ReceiversMap.ContainsKey(flag))
+            if (ReceiversMap[flag].Contains(action))
                 ReceiversMap[flag].Remove(action);
     }
 
@@ -175,7 +178,7 @@ public class ConnectionManager : MonoBehaviour
 
     }
 
-    
+
 
 
     public void PrintByteArray(byte[] bytes, bool str = false)
@@ -267,7 +270,7 @@ public class ConnectionManager : MonoBehaviour
         Debug.Log("Connected!");
         //socket.NoDelay = true;
         connected = true;
-        
+
         //Debug.Log("Starting watchdog");
 
         //StartCoroutine(watchdog());
@@ -277,14 +280,22 @@ public class ConnectionManager : MonoBehaviour
         stream = socket.GetStream();
         recvBuffer = new byte[dataBufferSize];
 
+        Packet hello = new Packet();
+        hello.header = Headers.hello;
+        hello.flag = Flags.none;
+        hello.AddToPayload(client_self.name);
+        hello.AddToPayload(client_self.steamID);
+        hello.AddToPayload(AppVersion);
+        hello.Send(stream);
 
+        
 
         stream.BeginRead(recvBuffer, 0, dataBufferSize, ReceiveCallback, null);
 
         //if (SceneManager.GetActiveScene().name != "mainmenu")
         //    SceneManager.LoadScene("mainmenu", LoadSceneMode.Single);
-        ThreadManager.ExecuteOnMainThread(()=>{ menuManager.ChangeMenu("main"); });
-        
+        ThreadManager.ExecuteOnMainThread(() => { menuManager.ChangeMenu("main"); });
+
     }
     private void ReceiveTCP()
     {
@@ -361,29 +372,30 @@ public class ConnectionManager : MonoBehaviour
         Disconnect();
     }
 
- 
+
 
     private void OnEnable()
     {
         Global.connectionManager = this;
         AppVersion = Application.version;
-       // mumbleManager = GetComponent<MumbleManager>(); 
+        // mumbleManager = GetComponent<MumbleManager>(); 
         StartCoroutine(WaitForLocalPlayer());
     }
 
     private void Start()
     {
-        
+
         if (SteamManager.Initialized)
         {
             Debug.Log($"Steam username: {SteamFriends.GetPersonaName()}");
+            client_self.steamID = SteamUser.GetSteamID().ToString();
         }
         else
         {
             Debug.LogError("Steam not initialized!");
-            WindowsMessageBox.ShowMessageBox("Steam is not running! Please run Steam and launch the game again.", "Error",16);
+            WindowsMessageBox.ShowMessageBox("Steam is not running! Please run Steam and launch the game again.", "Error", 16);
             Application.Quit();
-            
+
         }
         DontDestroyOnLoad(gameObject);
         menuManager = FindAnyObjectByType<MenuManager>();
@@ -393,10 +405,10 @@ public class ConnectionManager : MonoBehaviour
 
         udp_handler = FindObjectOfType<UDPHandler>();
         mapLoader = FindObjectOfType<MapLoader>();
-        
+
         parser.RegisterHeaderProcessor(Headers.ack, ParseACK);
         parser.RegisterHeaderProcessor(Headers.echo, ParseECHO);
-        parser.RegisterHeaderProcessor(Headers.hello, HelloFromServer);
+        //parser.RegisterHeaderProcessor(Headers.hello, HelloFromServer);
         parser.RegisterHeaderProcessor(Headers.data, ParseData);
         parser.RegisterHeaderProcessor(Headers.rejected, ParseRejection);
         parser.RegisterHeaderProcessor(Headers.disconnecting, ParseDisconnect);
@@ -407,7 +419,7 @@ public class ConnectionManager : MonoBehaviour
 
         client_self.name = $"{SteamFriends.GetPersonaName()}";
         ThreadManager.ExecuteOnMainThread(() => { menuManager.ChangeMenu("connecting"); });
-        
+        StartCoroutine(PingCheck());
         Connect(IPAddress.Parse(_IPAddress));
     }
 
@@ -418,7 +430,7 @@ public class ConnectionManager : MonoBehaviour
         {
             Debug.Log("Got fragmented packet!");
             FragmentedPacket res = defragmentator.PushData(_data);
-            if(res.isDone)
+            if (res.isDone)
             {
                 Debug.Log("Digested fragmented packet");
                 parser.DigestMessage(res.payload);
@@ -435,7 +447,7 @@ public class ConnectionManager : MonoBehaviour
     {
 
         List<Action<Packet>> actions;
-        if (ReceiversMap.TryGetValue(packet.flag[0],out actions))
+        if (ReceiversMap.TryGetValue(packet.flag[0], out actions))
         {
             ThreadManager.ExecuteOnMainThread(() =>
             {
@@ -448,7 +460,36 @@ public class ConnectionManager : MonoBehaviour
             Debug.LogWarning($"Receiver not found for flag {packet.flag[0].ToString("X")}\n{BitConverter.ToString(packet.payload)}");
         }
 
+
+    }
+
+    public void SendPacketAssertResponse(Packet packet, Action<Packet> responseCallback)
+    {
+        if (socket == null) return;
+        if (responseCallback == null) return;
+
+        byte[] newCallbackID = Guid.NewGuid().ToByteArray();
+
+        PacketResponseCallbackMap.Add(newCallbackID, responseCallback);
+
+        packet.callbackGUID = newCallbackID;
+        Debug.Log("Sending asserted00");
+        packet.Send(stream);
+
+
+    }
+
+    public void PacketCallback(byte[] guid,  Packet packet)
+    {
+        if(!PacketResponseCallbackMap.ContainsKey(guid)) {
+            Debug.LogWarning($"Got assertet response packet without callback present! GUID: {BitConverter.ToString(guid)}");
+            return;
+        }
+        Action<Packet> responseCallback = PacketResponseCallbackMap[guid];
+        PacketResponseCallbackMap.Remove(guid);
+        responseCallback.Invoke(packet);
         
+
     }
     #region Assembling and Sending Packets
     public void JoinLobby(int id, string password = "")
@@ -493,8 +534,8 @@ public class ConnectionManager : MonoBehaviour
         packet.Send(udp_handler.client, udp_handler.remoteEndPoint);
     }
 
-    
-    //TCP
+
+   
     public void SendItemInteractionInfo(ItemInteractionInfo interactionInfo)
     {
         string mes = JsonUtility.ToJson(interactionInfo);
@@ -533,7 +574,7 @@ public class ConnectionManager : MonoBehaviour
             Disconnect();
             return;
         }
-        if(packet.flag[0] == Flags.Response.lobbyClosing[0])
+        if (packet.flag[0] == Flags.Response.lobbyClosing[0])
         {
             ThreadManager.ExecuteOnMainThread(() => { FindObjectOfType<MapLoader>().ReturnToMenu(); });
             return;
@@ -573,7 +614,13 @@ public class ConnectionManager : MonoBehaviour
         lobby_list_request.Send(stream);
     }
 
-
+    public void RequestNetworkVars()
+    {
+        Packet packet = new Packet();
+        packet.header = Headers.data;
+        packet.flag = Flags.Request.NetworkVars;
+        packet.Send(stream);
+    }
 
 
     private void ParseIDAssign(Packet packet)
@@ -590,15 +637,18 @@ public class ConnectionManager : MonoBehaviour
             imHere.Send(udp_handler.client, udp_handler.remoteEndPoint);
 
         }
+
+        RequestLobbyList(null);
     }
 
 
 
- 
+
 
     private void ParseDisconnect(Packet packet)
     {
         Debug.Log("Disconnected by server!");
+        Debug.Log($"Disconnecting message: {Encoding.UTF8.GetString(packet.payload)}");
         //TODO: display Disconnected by server in game
         connected = false;
     }
@@ -607,58 +657,22 @@ public class ConnectionManager : MonoBehaviour
     }
     private void ParseECHO(Packet packet)
     {
-        Packet ackp = new Packet();
-        ackp.header = Headers.echo;
-        ackp.flag = Flags.none;
-        ackp.Send(stream);
-
-
-    }
-
-    private void HelloFromServer(Packet packet)
-    {
-        Packet hello = new Packet();
-        hello.header = Headers.hello;
-        hello.flag = Flags.none;
-        hello.AddToPayload(client_self.name);
-        hello.AddToPayload(AppVersion);
-        hello.Send(stream);
-
-        RequestLobbyList(packet);
-    }
-    #endregion
-
-    #region Json data
-    private void ParseWorldStateData(Packet packet)
-    {
-
         ThreadManager.ExecuteOnMainThread(() =>
         {
-            WorldState wS = packet.GetJson<WorldState>();
-            if (wS == null)
-                return;
-
-            mapLoader.UpdateWorldState(wS);
-
+            Ping = Time.realtimeSinceStartup - lastEchoTime;
         });
+        
     }
+
+
+
+   
+    #endregion
 
 
     #endregion
 
-    #endregion
 
-
-    IEnumerator watchdog()
-    {
-        while (connected)
-        {
-            Debug.Log("checking connection status...");
-
-            CheckStatus();
-            yield return new WaitForSeconds(1);
-        }
-    }
 
     private void Update()
     {
@@ -677,7 +691,7 @@ public class ConnectionManager : MonoBehaviour
         {
             if (client_self.connectedPlayer != null)
             {
-                if(LocalPlayerActions.Count > 0)
+                if (LocalPlayerActions.Count > 0)
                 {
                     Action action = LocalPlayerActions.Dequeue();
                     action.Invoke();
@@ -694,7 +708,7 @@ public class ConnectionManager : MonoBehaviour
 
     public void SendFragmented(FragmentedPacket fragmentedPacket)
     {
-        fragmentsReceivedMap.Add(fragmentedPacket.hash,false);
+        fragmentsReceivedMap.Add(fragmentedPacket.hash, false);
         Debug.Log($"Added hashmap entry for {fragmentedPacket.hash}");
         StartCoroutine(SendFragmentedData(fragmentedPacket));
     }
@@ -723,14 +737,14 @@ public class ConnectionManager : MonoBehaviour
         stream.BeginWrite(fragmentedPacket.chunks[0], 0, fragmentedPacket.chunks[0].Length, null, null); // send the initial packet
         while (true)
         {
-            if(fragmentsReceivedMap[fragmentedPacket.hash])
+            if (fragmentsReceivedMap[fragmentedPacket.hash])
             {
 
                 stream.BeginWrite(fragmentedPacket.chunks[index], 0, fragmentedPacket.chunks[index].Length, null, null);
                 fragmentsReceivedMap[fragmentedPacket.hash] = false;
                 if (index + 1 >= fragmentedPacket.chunks.Count)
                     break;
-                index ++; 
+                index++;
             }
             else
             {
@@ -739,6 +753,25 @@ public class ConnectionManager : MonoBehaviour
             yield return null;
         }
     }
-    
+
+    IEnumerator PingCheck()
+    {
+        while (true)
+        {
+            if (socket!=null && socket.Connected)
+            {
+                Packet echoPac = new();
+                echoPac.header = Headers.echo;
+                echoPac.flag = Flags.none;
+                echoPac.Send(stream);
+                ThreadManager.ExecuteOnMainThread(() =>
+                {
+                    lastEchoTime = Time.realtimeSinceStartup;
+                });
+            }
+            yield return new WaitForSeconds(2);
+        }
+    }
+
 }
 

@@ -8,7 +8,7 @@ public class ItemInteraction : MonoBehaviour
     private Player SelfPlayer;
     private InventoryManager SelfInventory;
     [SerializeField]
-    private float m_maxRaycastDistance = 10;
+    private float m_maxRaycastDistance = 3;
     public Transform holdPoint;
     public bool remotePickedUp { get; private set; }
     public bool remote;
@@ -19,7 +19,7 @@ public class ItemInteraction : MonoBehaviour
     {
         m_Camera = GetComponent<Camera>();
         SelfPlayer = transform.root.GetComponent<Player>();
-        SelfInventory = transform.root.GetComponent<InventoryManager>();
+        transform.root.TryGetComponent<InventoryManager>(out SelfInventory);
     }
 
 
@@ -32,7 +32,7 @@ public class ItemInteraction : MonoBehaviour
 
         if (remote) return; //-----------------------------LOCAL CODE BELOW----------------------------
 
-        if (Input.GetKeyDown(KeyCode.Mouse0) && SelfInventory.current!=null)
+        if (SelfInventory!= null && Input.GetKeyDown(KeyCode.Mouse0) && SelfInventory.current!=null)
         {
 
             SelfInventory.current.InternalInteract();
@@ -52,7 +52,7 @@ public class ItemInteraction : MonoBehaviour
                     hit.collider.gameObject.GetComponent<Interactable>().Interact(SelfPlayer);
                 }
                 
-                else if (hit.collider.gameObject.GetComponent<Item>())
+                else if (SelfInventory != null && hit.collider.gameObject.GetComponent<Item>())
                 {
                     Item _itm = hit.collider.gameObject.GetComponent<Item>();
 
@@ -71,7 +71,7 @@ public class ItemInteraction : MonoBehaviour
             }
         }
 
-        if(Input.GetKeyDown(KeyCode.G)) {
+        if(SelfInventory != null && Input.GetKeyDown(KeyCode.G)) {
             if (SelfInventory.current != null)
             {
                 SelfInventory.DropCurrent();

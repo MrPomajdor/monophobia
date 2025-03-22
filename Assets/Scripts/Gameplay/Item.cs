@@ -81,7 +81,9 @@ public abstract class Item : NetworkTransform
 
     public void ParseItemInteraction(Packet packet)
     {
-        ItemInteractionInfo inf = packet.GetJson<ItemInteractionInfo>();
+        ItemInteractionInfo inf = new ItemInteractionInfo();
+        if (!packet.GetFromPayload(inf))
+            return;
         
         if (inf == null)
             return;

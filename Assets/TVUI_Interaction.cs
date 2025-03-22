@@ -28,16 +28,16 @@ public class TVUI_Interaction : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             Vector3 planePos = MouseToPlane();
-            
-
-            input.ClickAt(new Vector2(Remap(-planePos.x, -5, 5, 0, 1500), Remap(-planePos.z, -5, 5, 0, 1000)), true);
+            Debug.Log(planePos);
+            if(planePos != Vector3.zero)
+                input.ClickAt(new Vector2(Remap(planePos.x, -5, 5, 0, 1500), Remap(planePos.z, -5, 5, 0, 1000)), true);
         }
 
         if (Input.GetKeyUp(KeyCode.Mouse0))
         {
             Vector3 planePos = MouseToPlane();
-
-            input.ClickAt(new Vector2(Remap(-planePos.x, -5, 5, 0, 1500), Remap(-planePos.z, -5, 5, 0, 1000)), false);
+            if (planePos != Vector3.zero)
+                input.ClickAt(new Vector2(Remap(planePos.x, -5, 5, 0, 1500), Remap(planePos.z, -5, 5, 0, 1000)), false);
         }
     }
 

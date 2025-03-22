@@ -10,11 +10,7 @@ using UnityEngine;
 
 //b'{"type":"PlayerPositionData","transforms":{"position":{"x":-0.3116506040096283,"y":1.0,"z":4.648215293884277},"euler":{"x":350.8000183105469,"y":358.1000061035156,"z":0.0},"velocity":{"x":-0.12243340164422989,"y":0.0,"z":3.6878068447113039}},"id":0}'
 
-[Serializable]
-public class UDPPacket
-{
-    public string type;
-}
+
 [Serializable]
 public class Inputs
 {
@@ -37,11 +33,11 @@ public class SerializableStats
 [Serializable]
 public class PlayerData 
 {
-    public string type = "PlayerPositionData";
+    public int id = -1;
     public Transforms transforms;
     public Inputs inputs;
-    public int id=-1;
-    public SerializableStats stats;
+    
+    //public SerializableStats stats;
 }
 
 
@@ -56,9 +52,8 @@ public class Transforms
 
 
 [Serializable]
-public class PlayersDataPacket
+public class IncomingPlayerData
 {
-    public string type = "OtherPlayersPositionData";
     public PlayerData[] players;
 
 }
@@ -67,7 +62,6 @@ public class PlayersDataPacket
 [Serializable]
 public class ObjectPositionData
 {
-    public string type = "ObjectPositionData";
     public int id;
     public Transforms transforms;
 
@@ -77,7 +71,6 @@ public class ObjectPositionData
 [Serializable]
 public class MobDataPacket
 {
-    public string type = "MobData";
     public int id;
     public Transforms transforms;
     public Transform target_tr;

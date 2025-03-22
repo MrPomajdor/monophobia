@@ -12,6 +12,7 @@ public class ClientHandle
     public string name;
     public Player connectedPlayer;
     public LobbyInfo lobbyInfo;
+    public string steamID;
     public PlayerInfo ToPlayerInfo()
     {
         return new PlayerInfo { id = id, name = name };

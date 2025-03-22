@@ -15,6 +15,8 @@ public abstract class NetworkTransform : MonoBehaviour
     private float lastUpdateTime;
 
     public bool HoldUpdate = false;
+    [SerializeField]
+    private bool debug;
     void Start()
     {
 
@@ -33,8 +35,9 @@ public abstract class NetworkTransform : MonoBehaviour
 
     public void ParseTransformPacket(Packet packet)
     {
-        ItemPosData itemPosData = packet.GetJson<ItemPosData>();
-        if (itemPosData == null)
+        ItemPosData itemPosData = new ItemPosData();
+        
+        if (!packet.GetFromPayload(itemPosData))
             return;
 
         if (itemPosData.id == NetworkTransformID)
@@ -129,6 +132,7 @@ public abstract class NetworkTransform : MonoBehaviour
     GUIStyle labelStyle = new GUIStyle();
     void OnGUI()
     {
+        if (debug) return;
         string t = $"{lastUpdateTime.ToString("F2")}\n{vel_dif.ToString("F3")}";
         Vector3 p = NetworkRb.transform.position;
         Vector3 screenPos = Camera.main.WorldToScreenPoint(p);

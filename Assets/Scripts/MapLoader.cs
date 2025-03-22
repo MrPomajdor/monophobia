@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 public class MapLoader : MonoBehaviour
 {
     public GameObject PlayerPrefab;
+    public GameObject InGameUI;
 
     public bool lobbyLoading; //oh god no
     public MapManager CurrentMapManager
@@ -18,8 +19,9 @@ public class MapLoader : MonoBehaviour
 
     public void ParseWorldStateData(Packet packet)
     {
-        WorldState wS = packet.GetJson<WorldState>();
-        if (wS == null)
+        WorldState wS = new WorldState();
+            
+        if (!packet.GetFromPayload(wS))
             return;
 
         UpdateWorldState(wS);
@@ -28,13 +30,18 @@ public class MapLoader : MonoBehaviour
     {
         Debug.Log("Got lobby info");
 
-        LobbyInfo lobbyInfo = packet.GetJson<LobbyInfo>();
-        Global.connectionManager.client_self.lobbyInfo = lobbyInfo;
-        if (lobbyInfo == null)
+        LobbyInfo lobbyInfo = new LobbyInfo();
+        if (!packet.GetFromPayload(lobbyInfo))
             return;
+        Global.connectionManager.client_self.lobbyInfo = lobbyInfo;
+
         if (lobbyLoading) //I HATE MYSELF (jk)
             return;                                     //TODO: do something with this shitty ass hack
-        Global.connectionManager.players = lobbyInfo.players;
+        foreach (NetworkPlayerInfo npi in lobbyInfo.players)
+        {
+            Global.connectionManager.players.Append(npi.ToPlayerInfo());
+        }
+        
 
         if (CurrentMapManager == null)
         {
@@ -80,6 +87,11 @@ public class MapLoader : MonoBehaviour
     public void LoadMap(LobbyInfo mapInfo)
     {
         Debug.Log($"Loading map {mapInfo.mapName}");
+        MenuManager menuManager = FindObjectOfType<MenuManager>();
+        if (menuManager)
+        {
+            menuManager.ChangeMenu("loading");
+        }
         StartCoroutine(LoadMapAsync(mapInfo));
 
     }
@@ -92,8 +104,9 @@ public class MapLoader : MonoBehaviour
     {
         Debug.Log("Updating map------------------------");
         Debug.Log(Global.connectionManager.clients.Count);
-        foreach (PlayerInfo client in CurrentMapManager.mapInfo.players)
+        foreach (NetworkPlayerInfo npi in CurrentMapManager.mapInfo.players)
         {
+            PlayerInfo client = npi.ToPlayerInfo();
             if (mapInfo.players.FirstOrDefault(x => (x.name == client.name && x.id == client.id)) == null)
             {
                 GameObject xd = Global.connectionManager.clients.FirstOrDefault(x => x.id == client.id).connectedPlayer.transform.root.gameObject;
@@ -101,15 +114,20 @@ public class MapLoader : MonoBehaviour
                 Destroy(xd);
 
                 Debug.Log($"Player {client.name}/{client.id} has left the lobby");
+                Global.chat.AddMessage($"   Player {client.name} has left the lobby", "#d4f542");
+
             }
         }
 
-        foreach (PlayerInfo client in mapInfo.players)
+        foreach (NetworkPlayerInfo npi in mapInfo.players)
         {
+            PlayerInfo client = npi.ToPlayerInfo();
+
             if (CurrentMapManager.mapInfo.players.FirstOrDefault(x => (x.name == client.name && x.id == client.id)) == null)
             {
 
                 Debug.Log($"Player {client.name}/{client.id} has joined the lobby");
+                Global.chat.AddMessage($"   Player {client.name} has joined the lobby", "#d4f542");
                 CreatePlayer(client);
 
             }
@@ -137,8 +155,9 @@ public class MapLoader : MonoBehaviour
             mapManager = FindObjectOfType<MapManager>();
             mapManager.mapInfo = mapInfo;
             bool isSelfHost = false;
-            foreach (PlayerInfo pl in mapInfo.players)
+            foreach (NetworkPlayerInfo npi in mapInfo.players)
             {
+                PlayerInfo pl = npi.ToPlayerInfo();
                 if (pl.id != Global.connectionManager.client_self.id) //check if player is local
                     CreatePlayer(pl); //remote player creation
                 else
@@ -187,6 +206,7 @@ public class MapLoader : MonoBehaviour
                     Destroy(item.gameObject);
                 }
                 Global.connectionManager.RequestWorldState();
+                
             }
 
 
@@ -265,6 +285,7 @@ public class MapLoader : MonoBehaviour
 
         Global.connectionManager.worldState = newWorldState;
         Global.connectionManager.items = FindObjectsByType<Item>(FindObjectsSortMode.None).ToList();
+        Global.connectionManager.RequestNetworkVars();
         //TODO: Add mobs
     }
 
@@ -277,7 +298,7 @@ public class MapLoader : MonoBehaviour
                                                            //forgot to update. its working
                                                            //GOD DAMMIT SELF CREATING ISNT WORKING D:
                                                            //and i wanna clarify - i know why this shit isn't working just i dont have the iron will to fix it xd
-        Debug.Log($"Creating player {pl.name} with id {pl.id} ({self})");
+        Debug.Log($"Creating player {pl.name} with id {pl.id} ({self}) - is a monster ?: {pl.isMonster}");
         PlayerSpawnPosition[] spawns = FindObjectsOfType<PlayerSpawnPosition>();
         if (spawns.Length == 0)
         {
@@ -291,25 +312,44 @@ public class MapLoader : MonoBehaviour
             Debug.LogWarning("Tried to create multiple player models with the same id");
             return;
         }
+        GameObject new_player;
+        if (!pl.isMonster)
+            new_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
+        else
+        {
+            
+            new_player = Instantiate(Resources.Load<GameObject>(pl.monsterData.Name), r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
+        }
 
-        GameObject new_player = Instantiate(PlayerPrefab, r_spawn_pos.transform.position, r_spawn_pos.transform.rotation);
         new_player.name = pl.name;
         new_player.GetComponent<MenuController>().uiCanvas.gameObject.SetActive(false);
         new_player.GetComponent<MenuController>().enabled = self;
+        if(self)
+            Instantiate(InGameUI,new_player.transform);
+        //new_player.transform.Find("InGameUI").gameObject.SetActive(self);
         Player npl = new_player.GetComponent<Player>();
+        bool isMonster = npl.playerInfo.isMonster;
+        MonsterData mData = npl.playerInfo.monsterData;
         npl.playerInfo = pl;
+        npl.playerInfo.isMonster = isMonster; 
+        npl.playerInfo.monsterData = mData;
         npl.movement.enabled = self;
         npl.cam.enabled = self;
         npl.cam.gameObject.GetComponent<ItemInteraction>().remote = !self;
         npl.cam.gameObject.GetComponent<MouseRotation>().enabled = self;
+        new_player.GetComponent<Feelings>().heartbeat.enabled = self;
+        new_player.GetComponent<Feelings>().enabled = self;
+
         npl.movement.enabled = self;
         npl.playerInfo.isLocal = self;
         npl.playerInfo.isHost = pl.isHost;
         npl.playerInfo.id = self ? Global.connectionManager.client_self.id : npl.playerInfo.id;
         npl.playerInfo.name = self ? Global.connectionManager.client_self.name : npl.playerInfo.name;
-        npl.voice.Initialize(RevisitedVoiceManager.Role.Receiver); //TODO: Remember to change it depending on local/remote side
+        if (!pl.isMonster)
+            npl.voice.Initialize(RevisitedVoiceManager.Role.Receiver); //TODO: Remember to change it depending on local/remote side
         npl.cam.GetComponent<AudioListener>().enabled = false;
-        npl.GetComponent<InventoryManager>().Remote = !self;
+        if(!pl.isMonster)
+            npl.GetComponent<InventoryManager>().Remote = !self;
 
         ClientHandle binpl = new ClientHandle();
         binpl.id = self ? Global.connectionManager.client_self.id : npl.playerInfo.id;

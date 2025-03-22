@@ -43,7 +43,9 @@ public abstract class NetworkCodeInteraction : MonoBehaviour
 
     private void ParseInteractableMessage(Packet packet)
     {
-        InteractionInfo intInfo = packet.GetJson<InteractionInfo>();
+        InteractionInfo intInfo = new InteractionInfo();
+        if (!packet.GetFromPayload(intInfo))
+            return;
         Interact(Global.connectionManager.clients.FirstOrDefault(x => x.id == intInfo.PlayerID).connectedPlayer);
     }
 
